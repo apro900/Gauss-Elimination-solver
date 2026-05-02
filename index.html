@@ -3,27 +3,54 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gauss Solver — Academic Pro Edition</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>Gauss Solver — Academic Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a40;
-    --accent: #6c63ff; --accent2: #ff6584; --accent3: #43e97b;
-    --text: #e8e8f0; --muted: #6b6b8a;
+    --bg: #0a0a0f; --surface: #12121a; --border: #2a2a40;
+    --accent: #6c63ff; --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif;
-    min-height: 100vh; padding: 40px 20px;
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 30px; }
+  .container { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: radial-gradient(circle at 50% 50%, rgba(108,99,255,0.05), transparent); z-index: 0; }
+
+  .hero { text-align: center; margin-bottom: 30px; }
+  .hero h1 { font-size: 2.5rem; font-weight: 800; color: #fff; text-shadow: 0 0 20px rgba(108,99,255,0.3); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; margin-bottom: 20px; }
+  .setup-row { display: flex; gap: 15px; margin-bottom: 20px; justify-content: center; }
+  label { font-size: 0.7rem; color: var(--muted); display: block; margin-bottom: 5px; font-family: 'Space Mono'; }
+
+  input.cell {
+    background: #1a1a26; border: 1px solid var(--border); color: white;
+    padding: 10px; border-radius: 8px; width: 70px; text-align: center; font-family: 'Space Mono';
+  }
+  .matrix-grid { display: grid; gap: 8px; justify-content: center; margin: 20px 0; overflow-x: auto; }
+  .matrix-row { display: flex; align-items: center; gap: 5px; padding: 2px 0; }
+  .aug-line { width: 2px; height: 30px; background: var(--accent); margin: 0 8px; opacity: 0.6; }
+
+  .btn {
+    padding: 14px 28px; border-radius: 10px; border: none; cursor: pointer;
+    background: var(--accent); color: white; font-weight: 700; width: 100%; font-family: 'Syne';
   }
 
-  /* Grid Background Effect */
-  body::before {
-    content: ''; position: fixed; inset: 0;
-    background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
-    background-size: 40px 40px; pointer-events: none; z-index: 0;
-  }
+  .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; }
+  .step-header { padding: 10px 15px; font-family: 'Space Mono'; font-size: 0.7rem; color: var(--accent); border-bottom: 1px solid var(--border); }
+  .step-op { padding: 12px; background: #161621; margin: 15px; border-radius: 6px; border-right: 3px solid var(--accent); direction: rtl; text-align: right; font-size: 0.9rem; }
 
-  .container { position: relative; z
+  .mat-table { border-collapse: collapse; margin: 0 auto 15px; font-family: 'Space Mono'; font-size: 0.85rem; }
+  .mat-table td { padding: 8px 12px; border: 1px solid var(--border); text-align: center; min-width: 55px; }
+
+  .analysis-card { border: 1px solid var(--accent3); padding: 20px; border-radius: 12px; background: rgba(67,233,123,0.02); direction: rtl; text-align: right; }
+  .eqn-box { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; margin: 5px 0; font-family: 'Space Mono'; direction: ltr; text-align: left; font-size: 0.95rem; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="hero"><h1>Gauss Solver Pro</h1></div>
+
+  <div class="card">
+    <div class="setup-row">
+      <div><label>ROWS (m)</label><input type="number" id="rows" value="3" class="cell" onchange="initGrid()"></div>
