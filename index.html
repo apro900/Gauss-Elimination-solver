@@ -3,83 +3,107 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pro Gauss Solver | CS Edition</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<title>Gauss Elimination Solver</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
+  /* الحفاظ على تصميمك الأصلي بالكامل */
   :root {
-    --bg: #0a0a0f; --surface: #12121a; --border: #2a2a40; --accent: #6c63ff;
-    --accent2: #ff6584; --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
+    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a40;
+    --accent: #6c63ff; --accent2: #ff6584; --accent3: #43e97b; --text: #e8e8f0;
+    --muted: #6b6b8a; --pivot-color: #ffd166; --op-color: #06d6a0; --swap-color: #ef476f;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; line-height: 1.6; }
-  .container { max-width: 1000px; margin: 0 auto; padding: 40px 20px; position: relative; z-index: 1; }
-  .hero { text-align: center; margin-bottom: 40px; }
-  .hero h1 { font-size: 3rem; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
   
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; margin-bottom: 20px; }
-  .matrix-wrapper { overflow-x: auto; padding: 10px 0; }
-  .matrix-grid { display: inline-grid; gap: 8px; margin: 0 auto; }
-  .matrix-row { display: flex; gap: 8px; align-items: center; }
+  /* منع ظهور أسهم الزيادة والنقصان */
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  /* الخلفية والأنيميشن الخاصة بكِ */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; animation: drift 8s ease-in-out infinite; }
+  .orb1 { width: 400px; height: 400px; background: rgba(108,99,255,0.12); top: -100px; right: -100px; }
+  .orb2 { width: 300px; height: 300px; background: rgba(255,101,132,0.08); bottom: 10%; left: -80px; }
+  @keyframes drift { 0%,100% { transform: translate(0,0); } 50% { transform: translate(20px, -20px); } }
+
+  .container { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+  .hero { text-align: center; padding: 40px 0; }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  
+  /* تحسين عرض المصفوفة للمجاهيل الكثيرة */
+  .matrix-wrapper { overflow-x: auto; padding: 10px 0; scrollbar-width: thin; scrollbar-color: var(--accent) transparent; }
+  .matrix-grid { display: inline-grid; gap: 8px; min-width: 100%; }
+  .matrix-row { display: flex; gap: 8px; align-items: center; justify-content: center; }
+
   input {
-    background: #1a1a26; border: 1px solid var(--border); color: #fff;
-    font-family: 'Space Mono', monospace; padding: 10px; border-radius: 6px;
-    width: 70px; text-align: center; transition: 0.2s;
+    background: var(--surface2); border: 1px solid var(--border); color: #fff;
+    font-family: 'Space Mono', monospace; padding: 12px; border-radius: 8px;
+    width: 75px; text-align: center; transition: 0.3s; font-size: 0.9rem;
   }
-  input:focus { border-color: var(--accent); outline: none; background: #222235; }
-  .b-input { background: rgba(108,99,255,0.1); border-color: var(--accent); }
-  
+  input:focus { border-color: var(--accent); outline: none; background: rgba(108,99,255,0.1); box-shadow: 0 0 15px rgba(108,99,255,0.2); }
+  .b-col { border-color: var(--accent) !important; background: rgba(108,99,255,0.05); }
+
   .btn {
-    padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer;
-    font-weight: 700; font-family: 'Syne'; transition: 0.3s;
+    padding: 14px 30px; border-radius: 10px; border: none; cursor: pointer;
+    font-weight: 700; font-family: 'Syne'; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px;
   }
-  .btn-primary { background: var(--accent); color: #white; }
-  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(108,99,255,0.4); }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), #8a84ff); color: white; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(108,99,255,0.4); }
+
+  .eq-preview { font-family: 'Space Mono'; color: var(--accent3); background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 0.85rem; border-left: 3px solid var(--accent3); }
   
-  .equation-preview { font-family: 'Space Mono'; font-size: 0.9rem; color: var(--accent3); margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px; }
-  .step-card { border-left: 4px solid var(--accent); background: #161621; margin-bottom: 15px; padding: 15px; border-radius: 0 8px 8px 0; }
-  .step-op { color: var(--accent3); font-weight: bold; margin-bottom: 10px; font-family: 'Space Mono'; }
-  
-  .rank-box { display: flex; gap: 20px; margin-bottom: 20px; }
-  .stat { flex: 1; background: #1a1a26; padding: 15px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
-  .stat .val { font-size: 2rem; color: var(--accent); font-weight: 800; }
-  
-  table { border-collapse: collapse; margin: 10px 0; }
-  td { border: 1px solid var(--border); padding: 8px 12px; text-align: center; font-family: 'Space Mono'; }
-  .pivot-cell { background: rgba(255, 209, 102, 0.2); color: #ffd166; }
+  /* ستايل الخطوات التفصيلية */
+  .step-card { border-left: 4px solid var(--accent); background: var(--surface2); margin-bottom: 20px; padding: 20px; border-radius: 0 12px 12px 0; animation: fadeIn 0.5s ease forwards; }
+  .step-op { color: var(--accent3); font-weight: bold; margin-bottom: 12px; font-family: 'Space Mono'; font-size: 0.9rem; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .rank-box { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+  .stat { flex: 1; background: var(--surface); border: 1px solid var(--border); padding: 15px; border-radius: 12px; text-align: center; min-width: 120px; }
+  .stat .val { font-size: 1.8rem; color: var(--accent); font-weight: 800; display: block; }
+  .stat .lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-top: 5px; }
+
+  table { border-collapse: collapse; width: 100%; max-width: 600px; margin: 10px 0; }
+  td { border: 1px solid var(--border); padding: 10px; text-align: center; font-family: 'Space Mono'; font-size: 0.9rem; }
 </style>
 </head>
 <body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
 
 <div class="container">
   <div class="hero">
-    <h1>Gauss-Jordan Expert</h1>
-    <p style="color: var(--muted)">Linear Algebra Academic Solver</p>
+    <h1>Advanced Gauss Solver</h1>
+    <p style="color: var(--muted); margin-top:10px;">// Matrix Intelligence System</p>
   </div>
 
   <div class="card">
-    <div style="display: flex; gap: 15px; align-items: flex-end;">
-      <div>
-        <label style="display:block; font-size:0.8rem; margin-bottom:5px">Equations (m)</label>
-        <input type="number" id="rows" value="3" min="1" max="10">
+    <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 150px;">
+        <label style="display:block; font-size:0.7rem; color:var(--muted); margin-bottom:8px">EQUATIONS (M)</label>
+        <input type="number" id="rows" value="3" style="width:100%">
       </div>
-      <div>
-        <label style="display:block; font-size:0.8rem; margin-bottom:5px">Unknowns (n)</label>
-        <input type="number" id="cols" value="3" min="1" max="10">
+      <div style="flex: 1; min-width: 150px;">
+        <label style="display:block; font-size:0.7rem; color:var(--muted); margin-bottom:8px">UNKNOWN VARIABLES (N)</label>
+        <input type="number" id="cols" value="3" style="width:100%">
       </div>
-      <button class="btn btn-primary" onclick="initMatrix()">Generate Workspace</button>
+      <button class="btn btn-primary" onclick="initWorkspace()">Update Grid</button>
     </div>
   </div>
 
   <div id="workspace" class="card" style="display:none">
-    <h3 style="margin-bottom:15px">02. Enter Coefficients & Constants</h3>
-    <div id="equationDisplay" class="equation-preview"></div>
+    <div id="eqPreview" class="eq-preview"></div>
     <div class="matrix-wrapper">
       <div id="grid" class="matrix-grid"></div>
     </div>
-    <div style="margin-top:20px; display:flex; gap:10px">
-      <button class="btn btn-primary" onclick="solve()">▶ Solve Step-by-Step</button>
-      <button class="btn" style="background:#2a2a40; color:white" onclick="loadExample()">Load Example</button>
+    <div style="margin-top:25px; display:flex; gap:12px">
+      <button class="btn btn-primary" style="flex:2" onclick="solve()">Calculate Solution</button>
+      <button class="btn" style="background:var(--surface2); color:white; flex:1" onclick="resetToExample()">Load Academic Example</button>
     </div>
   </div>
 
@@ -89,75 +113,75 @@
 <script>
 let R, C;
 
-// Initialization & Keyboard Navigation
-function initMatrix() {
-    R = parseInt(document.getElementById('rows').value);
-    C = parseInt(document.getElementById('cols').value);
+// دالة البدء مع إدراج مثال جاهز فوراً
+function initWorkspace(isExample = false) {
+    R = parseInt(document.getElementById('rows').value) || 3;
+    C = parseInt(document.getElementById('cols').value) || 3;
     const grid = document.getElementById('grid');
     grid.innerHTML = '';
     
+    // مثال أكاديمي افتراضي (3x3)
+    const exampleValues = [[2, 1, -1, 8], [-3, -1, 2, -11], [-2, 1, 2, -3]];
+
     for (let i = 0; i < R; i++) {
         const rowDiv = document.createElement('div');
         rowDiv.className = 'matrix-row';
         for (let j = 0; j <= C; j++) {
             const input = document.createElement('input');
             input.type = 'number';
-            input.id = `cell-${i}-${j}`;
-            input.placeholder = j === C ? `b${i+1}` : `x${j+1}`;
-            if (j === C) input.classList.add('b-input');
+            input.id = `c-${i}-${j}`;
+            input.placeholder = j === C ? 'b' : `x${j+1}`;
+            if (j === C) input.classList.add('b-col');
             
-            // Arrow Keys Logic
+            // وضع قيم المثال الجاهز إذا كان 3x3
+            if (isExample && exampleValues[i] && exampleValues[i][j] !== undefined) {
+                input.value = exampleValues[i][j];
+            }
+
+            // التنقل بأسهم الكيبورد
             input.onkeydown = function(e) {
-                if (e.key.includes('Arrow')) {
-                    e.preventDefault();
-                    let ni = i, nj = j;
-                    if (e.key === 'ArrowRight') nj++;
-                    if (e.key === 'ArrowLeft') nj--;
-                    if (e.key === 'ArrowDown') ni++;
-                    if (e.key === 'ArrowUp') ni--;
-                    const next = document.getElementById(`cell-${ni}-${nj}`);
-                    if (next) next.focus();
-                }
+                let ni = i, nj = j;
+                if (e.key === 'ArrowRight') nj++;
+                if (e.key === 'ArrowLeft') nj--;
+                if (e.key === 'ArrowDown') ni++;
+                if (e.key === 'ArrowUp') ni--;
+                const next = document.getElementById(`c-${ni}-${nj}`);
+                if (next) { e.preventDefault(); next.focus(); }
             };
-            input.oninput = updateEquations;
+            input.oninput = updatePreview;
             rowDiv.appendChild(input);
         }
         grid.appendChild(rowDiv);
     }
     document.getElementById('workspace').style.display = 'block';
-    updateEquations();
+    updatePreview();
 }
 
-function updateEquations() {
+function updatePreview() {
     let html = '';
     for (let i = 0; i < R; i++) {
         let line = [];
         for (let j = 0; j < C; j++) {
-            let val = document.getElementById(`cell-${i}-${j}`).value || '0';
-            line.push(`${val}x<sub>${j+1}</sub>`);
+            let v = document.getElementById(`c-${i}-${j}`).value || '0';
+            line.push(`${v}x<sub>${j+1}</sub>`);
         }
-        let b = document.getElementById(`cell-${i}-${C}`).value || '0';
-        html += `Eq ${i+1}: ` + line.join(' + ') + ` = ${b}<br>`;
+        let b = document.getElementById(`c-${i}-${C}`).value || '0';
+        html += `Eq.${i+1}: ` + line.join(' + ') + ` = ${b}<br>`;
     }
-    document.getElementById('equationDisplay').innerHTML = html.replace(/\+ -/g, '- ');
+    document.getElementById('eqPreview').innerHTML = html.replace(/\+ -/g, '- ');
 }
 
-function loadExample() {
-    const ex = [[2, 1, -1, 8], [-3, -1, 2, -11], [-2, 1, 2, -3]];
+function resetToExample() {
     document.getElementById('rows').value = 3;
     document.getElementById('cols').value = 3;
-    initMatrix();
-    for(let i=0; i<3; i++) {
-        for(let j=0; j<4; j++) document.getElementById(`cell-${i}-${j}`).value = ex[i][j];
-    }
-    updateEquations();
+    initWorkspace(true);
 }
 
-// Math Utility: Fraction Format
-function format(n) {
+// تحويل الأرقام لكسور بسيطة لشكل أكاديمي
+function formatNum(n) {
     if (Math.abs(n) < 1e-10) return "0";
     if (Number.isInteger(n)) return n.toString();
-    for (let d = 1; d <= 50; d++) {
+    for (let d = 1; d <= 20; d++) {
         let num = Math.round(n * d);
         if (Math.abs(n - num / d) < 1e-6) return d === 1 ? `${num}` : `${num}/${d}`;
     }
@@ -168,97 +192,77 @@ function solve() {
     let mat = [];
     for (let i = 0; i < R; i++) {
         mat[i] = [];
-        for (let j = 0; j <= C; j++) {
-            mat[i][j] = parseFloat(document.getElementById(`cell-${i}-${j}`).value) || 0;
-        }
+        for (let j = 0; j <= C; j++) mat[i][j] = parseFloat(document.getElementById(`c-${i}-${j}`).value) || 0;
     }
 
     const output = document.getElementById('output');
-    output.innerHTML = '<h2>Solution Steps:</h2>';
+    output.innerHTML = '<h3 style="margin-bottom:20px; color:var(--accent)">Full Solution Steps:</h3>';
+    let stepsHtml = "";
 
-    let steps = "";
-    let pivotRow = 0;
-    let pivotCol = 0;
+    let h = 0, k = 0;
+    while (h < R && k < C) {
+        let i_max = h;
+        for (let i = h + 1; i < R; i++) if (Math.abs(mat[i][k]) > Math.abs(mat[i_max][k])) i_max = i;
 
-    while (pivotRow < R && pivotCol < C) {
-        // Partial Pivoting
-        let max = pivotRow;
-        for (let i = pivotRow + 1; i < R; i++) {
-            if (Math.abs(mat[i][pivotCol]) > Math.abs(mat[max][pivotCol])) max = i;
+        if (Math.abs(mat[i_max][k]) < 1e-10) { k++; continue; }
+
+        if (h !== i_max) {
+            [mat[h], mat[i_max]] = [mat[i_max], mat[h]];
+            stepsHtml += renderTable(mat, `Swap R${h+1} with R${i_max+1}`);
         }
 
-        if (Math.abs(mat[max][pivotCol]) < 1e-10) {
-            pivotCol++;
-            continue;
-        }
-
-        if (max !== pivotRow) {
-            [mat[pivotRow], mat[max]] = [mat[max], mat[pivotRow]];
-            steps += renderStep(mat, `Swap R${pivotRow+1} ↔ R${max+1}`, pivotRow, pivotCol);
-        }
-
-        // Eliminate below
-        for (let i = pivotRow + 1; i < R; i++) {
-            if (Math.abs(mat[i][pivotCol]) > 1e-10) {
-                let factor = mat[i][pivotCol] / mat[pivotRow][pivotCol];
-                for (let j = pivotCol; j <= C; j++) mat[i][j] -= factor * mat[pivotRow][j];
-                steps += renderStep(mat, `R${i+1} → R${i+1} - (${format(factor)})R${pivotRow+1}`, i, pivotCol);
+        for (let i = h + 1; i < R; i++) {
+            let factor = mat[i][k] / mat[h][k];
+            if (Math.abs(factor) > 1e-10) {
+                for (let j = k; j <= C; j++) mat[i][j] -= factor * mat[h][j];
+                stepsHtml += renderTable(mat, `R${i+1} = R${i+1} - (${formatNum(factor)})R${h+1}`);
             }
         }
-        pivotRow++;
-        pivotCol++;
+        h++; k++;
     }
 
-    // Rank Analysis
-    let rankA = 0;
-    let rankAug = 0;
+    // تحليل الـ Rank
+    let rankA = 0, rankAug = 0;
     for (let i = 0; i < R; i++) {
-        let rowEmptyA = true;
-        for (let j = 0; j < C; j++) if (Math.abs(mat[i][j]) > 1e-10) rowEmptyA = false;
-        if (!rowEmptyA) rankA++;
-        
-        let rowEmptyAug = true;
-        for (let j = 0; j <= C; j++) if (Math.abs(mat[i][j]) > 1e-10) rowEmptyAug = false;
-        if (!rowEmptyAug) rankAug++;
+        let rowA = false, rowAug = false;
+        for (let j = 0; j < C; j++) if (Math.abs(mat[i][j]) > 1e-10) rowA = true;
+        for (let j = 0; j <= C; j++) if (Math.abs(mat[i][j]) > 1e-10) rowAug = true;
+        if (rowA) rankA++;
+        if (rowAug) rankAug++;
     }
 
-    let finalLogic = "";
-    if (rankA < rankAug) {
-        finalLogic = `<div class="stat" style="border-color:var(--accent2)">Status: <strong>No Solution</strong> (Inconsistent)</div>`;
-    } else if (rankA < C) {
-        finalLogic = `<div class="stat" style="border-color:var(--accent)">Status: <strong>Infinite Solutions</strong> (${C - rankA} Free Variables)</div>`;
-    } else {
-        finalLogic = `<div class="stat" style="border-color:var(--accent3)">Status: <strong>Unique Solution</strong></div>`;
-    }
+    let status = "Unique Solution";
+    let color = "var(--accent3)";
+    if (rankA < rankAug) { status = "No Solution (Inconsistent)"; color = "var(--accent2)"; }
+    else if (rankA < C) { status = "Infinite Solutions"; color = "var(--accent)"; }
 
     output.innerHTML += `
         <div class="rank-box">
-            <div class="stat"><div class="lbl">Rank(A)</div><div class="val">${rankA}</div></div>
-            <div class="stat"><div class="lbl">Rank(Aug)</div><div class="val">${rankAug}</div></div>
-            <div class="stat"><div class="lbl">Unknowns (n)</div><div class="val">${C}</div></div>
+            <div class="stat"><span class="val">${rankA}</span><span class="lbl">Rank(A)</span></div>
+            <div class="stat"><span class="val">${rankAug}</span><span class="lbl">Rank(Aug)</span></div>
+            <div class="stat"><span class="val">${C}</span><span class="lbl">n (Unknowns)</span></div>
+            <div class="stat" style="border-color:${color}"><span class="val" style="color:${color}; font-size:1.1rem">${status}</span><span class="lbl">Final Logic</span></div>
         </div>
-        ${finalLogic}
-        ${steps}
+        ${stepsHtml}
     `;
-    output.scrollIntoView({behavior: 'smooth'});
+    output.scrollIntoView({ behavior: 'smooth' });
 }
 
-function renderStep(m, title, pr, pc) {
-    let h = `<div class="step-card"><div class="step-op">${title}</div><table>`;
+function renderTable(m, title) {
+    let h = `<div class="step-card"><div class="step-op">◆ ${title}</div><div style="overflow-x:auto"><table>`;
     for (let i = 0; i < R; i++) {
-        h += `<tr>`;
+        h += "<tr>";
         for (let j = 0; j <= C; j++) {
-            let cls = (i === pr && j === pc) ? 'class="pivot-cell"' : '';
-            h += `<td ${cls}>${format(m[i][j])}</td>`;
+            h += `<td>${formatNum(m[i][j])}</td>`;
+            if (j === C - 1) h += `<td style="border:none; color:var(--border); font-weight:bold">|</td>`;
         }
-        h += `</tr>`;
+        h += "</tr>";
     }
-    return h + `</table></div>`;
+    return h + "</table></div></div>";
 }
 
-// Initial Run
-window.onload = initMatrix;
+// تشغيل المثال عند الفتح
+window.onload = resetToExample;
 </script>
-
 </body>
 </html>
