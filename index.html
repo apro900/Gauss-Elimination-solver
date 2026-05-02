@@ -1,1 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gauss Elimination Solver</title>
+<style>
+:root {
+  --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26;
+  --border: #2a2a40; --accent: #6c63ff; --accent2: #ff6584;
+  --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
+  --yellow: #ffd166; --teal: #06d6a0;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; min-height:100vh; }
 
+body::before {
+  content:''; position:fixed; inset:0;
+  background-image: linear-gradient(rgba(108,99,255,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(108,99,255,0.03) 1px,transparent 1px);
+  background-size:40px 40px; pointer-events:none; z-index:0;
+}
+.orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; }
+.orb1 { width:500px; height:500px; background:rgba(108,99,255,0.1); top:-150px; right:-150px; }
+.orb2 { width:400px; height:400px; background:rgba(255,101,132,0.07); bottom:0; left:-100px; }
+
+.wrap { position:relative; z-index:1; max-width:950px; margin:0 auto; padding:40px 20px 80px; }
+
+/* ── Header ── */
+.hero { text-align:center; padding:50px 0 40px; }
+.hero-badge { display:inline-block; font-size:10px; letter-spacing:3px; color:var(--accent); border:1px solid rgba(108,99,255,0.4); padding:5px 16px; border-radius:20px; margin-bottom:20px; text-transform:uppercase; }
+.hero h1 { font-size:clamp(2rem,5vw,3.5rem); font-weight:900; letter-spacing:-1px; background:linear-gradient(135deg,#fff 0%,#a89bff 50%,#ff6584 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:10px; }
+.hero p { color:var(--muted); font-size:0.85rem; letter-spacing:2px; }
+
+/* ── Card ── */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; margin-bottom:20px; position:relative; overflow:hidden; }
+.card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(108,99,255,0.5),transparent); }
+.card-label { font-size:10px; letter-spacing:3px; color:var(--accent); text-transform:uppercase; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+.card-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* ── Setup ── */
+.setup-row { display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; }
+.field { display:flex; flex-direction:column; gap:6px; flex:1; min-width:100px; }
+.field label { font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+.field input[type=number] { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'Courier New',monospace; font-size:1.1rem; padding:11px 14px; border-radius:10px; outline:none; -moz-appearance:textfield; transition:border-color .2s,box-shadow .2s; }
+.field input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
+.field input[type=number]:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(108,99,255,0.15); }
+
+/* ── Equations Display ── */
+.eq-display { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px; text-align:center; overflow-x:auto; }
+.eq-line { font-size:clamp(0.85rem,2.5vw,1.05rem); color:var(--text); letter-spacing:1px; padding:6px 0; white-space:nowrap; }
+.eq-line .sub { font-size:0.75em; color:var(--muted); }
+.eq-hint { font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+
+/* ── Matrix ── */
+.matrix-wrap { overflow-x:auto; padding-bottom:4px; }
+.col-heads { display:flex; gap:8px; padding-left:44px; margin-bottom:4px; min-width:max-content; }
+.col-head { width:70px; text-align:center; font-size:10px; color:var(--muted); letter-spacing:1px; flex-shrink:0; }
+.col-head.b-head { color:var(--accent); }
+.col-head.sep-head { width:20px; flex-shrink:0; }
+.mrow { display:flex; align-items:center; gap:8px; margin-bottom:8px; min-width:max-content; }
+.row-lbl { width:36px; text-align:right; font-size:11px; color:var(--muted); flex-shrink:0; }
+.cell { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'Courier New',monospace; font-size:0.95rem; padding:10px; border-radius:8px; width:70px; text-align:center; outline:none; flex-shrink:0; -moz-appearance:textfield; transition:border-color .2s,background .2s; }
+.cell::-webkit-inner-spin-button { -webkit-appearance:none; }
+.cell:focus { border-color:var(--accent); background:rgba(108,99,255,0.07); }
+.cell.b-cell { background:rgba(108,99,255,0.08); border-color:rgba(108,99,255,0.3); }
+.aug-sep { width:2px; height:36px; background:rgba(108,99,255,0.4); flex-shrink:0; margin:0 4px; }
+
+/* ── Buttons ── */
+.btns { display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+.btn { padding:13px 24px; border-radius:10px; border:none; cursor:pointer; font-family:'Courier New',monospace; font-weight:700; font-size:0.9rem; letter-spacing:1px; transition:all .2s; }
+.btn-solve { background:linear-gradient(135deg,var(--accent),#9b8cff); color:#fff; flex:1; }
+.btn-solve:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(108,99,255,0.4); }
+.btn-ex { background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
+.btn-ex:hover { color:var(--text); border-color:var(--accent); }
+.btn-clr { background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
+
+/* ── Steps ── */
+#output { display:none; }
+.step { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; overflow:hidden; animation:fadeUp .35s ease both; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+.step-head { padding:12px 18px; display:flex; align-items:center; gap:10px; font-size:11px; letter-spacing:2px; text-transform:uppercase; }
+.step-head.initial { background:rgba(108,99,255,0.08); color:var(--accent); border-bottom:1px solid rgba(108,99,255,0.15); }
+.step-head.swap    { background:rgba(239,71,111,0.08); color:#ef476f;      border-bottom:1px solid rgba(239,71,111,0.15); }
+.step-head.scale   { background:rgba(255,209,102,0.08); color:var(--yellow); border-bottom:1px solid rgba(255,209,102,0.15); }
+.step-head.elim    { background:rgba(6,214,160,0.08); color:var(--teal);   border-bottom:1px solid rgba(6,214,160,0.15); }
+.step-head.pivot   { background:rgba(255,209,102,0.06); color:var(--yellow); border-bottom:1px solid rgba(255,209,102,0.1); }
+.step-head.result  { background:rgba(67,233,123,0.08); color:var(--accent3); border-bottom:1px solid rgba(67,233,123,0.15); }
+.step-head.nosol   { background:rgba(255,101,132,0.08); color:var(--accent2); border-bottom:1px solid rgba(255,101,132,0.15); }
+.step-head.inf     { background:rgba(255,209,102,0.08); color:var(--yellow); border-bottom:1px solid rgba(255,209,102,0.15); }
+
+.step-body { padding:18px 20px; }
+.op-box { font-size:0.9rem; color:var(--text); padding:10px 14px; background:rgba(255,255,255,0.03); border-left:3px solid var(--accent); border-radius:0 8px 8px 0; margin-bottom:14px; letter-spacing:.5px; }
+.op-box.swap-op  { border-color:#ef476f; }
+.op-box.scale-op { border-color:var(--yellow); }
+.op-box.elim-op  { border-color:var(--teal); }
+
+/* ── Matrix Table ── */
+.mat-wrap { overflow-x:auto; }
+.mat { border-collapse:collapse; margin:0 auto; font-family:'Courier New',monospace; font-size:0.88rem; }
+.mat th { padding:5px 14px; color:var(--muted); font-weight:400; font-size:10px; letter-spacing:1px; }
+.mat td { padding:9px 16px; text-align:center; border:1px solid var(--border); min-width:60px; color:var(--text); }
+.mat td.rl { color:var(--muted); font-size:10px; border:none; padding-right:8px; }
+.mat td.bc { border-left:2px solid rgba(108,99,255,0.5); color:var(--accent); }
+.mat td.pivot-cell { background:rgba(255,209,102,0.12); color:var(--yellow); font-weight:700; }
+.mat td.zero { color:var(--border); }
+
+/* ── Analysis ── */
+.analysis { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; overflow:hidden; animation:fadeUp .35s ease both; }
+.rank-bars { display:flex; gap:12px; flex-wrap:wrap; padding:20px; }
+.rb { flex:1; min-width:80px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center; }
+.rb .v { font-size:2rem; font-weight:900; line-height:1; }
+.rb .l { font-size:9px; color:var(--muted); letter-spacing:2px; margin-top:4px; text-transform:uppercase; }
+.rb .sym { font-size:1.4rem; font-weight:700; display:flex; align-items:center; justify-content:center; height:100%; }
+.compare-box { margin:0 20px 20px; padding:14px 18px; border-radius:10px; border:1px solid; }
+.compare-box.ok  { background:rgba(67,233,123,0.05); border-color:rgba(67,233,123,0.25); color:var(--accent3); }
+.compare-box.inf { background:rgba(255,209,102,0.05); border-color:rgba(255,209,102,0.25); color:var(--yellow); }
+.compare-box.no  { background:rgba(255,101,132,0.05); border-color:rgba(255,101,132,0.25); color:var(--accent2); }
+.compare-rule { font-size:0.88rem; margin-bottom:6px; }
+.compare-note { font-size:0.75rem; color:var(--muted); line-height:1.6; }
+
+/* ── Solution ── */
+.sol-section { padding:0 20px 20px; }
+.sol-title { font-size:10px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:12px; padding-top:4px; }
+.back-step { font-size:0.85rem; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text); }
+.back-step:last-child { border-bottom:none; }
+.final-box { background:var(--surface2); border:1px solid rgba(67,233,123,0.25); border-radius:10px; padding:20px; text-align:center; margin-top:14px; }
+.final-box.inf-box { border-color:rgba(255,209,102,0.25); }
+.sol-line { font-size:1rem; color:var(--accent3); padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.sol-line:last-child { border-bottom:none; }
+.sol-line.free { color:var(--muted); font-size:0.85rem; }
+.badge { display:inline-block; padding:4px 14px; border-radius:20px; font-size:10px; letter-spacing:2px; margin-bottom:14px; text-transform:uppercase; }
+.badge.ok  { background:rgba(67,233,123,0.12); color:var(--accent3); }
+.badge.inf { background:rgba(255,209,102,0.12); color:var(--yellow); }
+.badge.no  { background:rgba(255,101,132,0.12); color:var(--accent2); }
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--surface); }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="wrap">
+
+<div class="hero">
+  <div class="hero-badge">Linear Algebra</div>
+  <h1>Gauss Elimination</h1>
+  <p>// Academic Step-by-Step Solver</p>
+</div>
+
+<div class="card">
+  <div class="card-label">01 — System Size</div>
+  <div class="setup-row">
+    <div class="field"><label>Equations (m)</label><input type="number" id="numM" min="1" value="3"></div>
+    <div class="field"><label>Unknowns (n)</label><input type="number" id="numN" min="1" value="3"></div>
+    <button class="btn btn-ex" style="padding:11px 18px;flex-shrink:0" onclick="buildGrid()">Build →</button>
+  </div>
+</div>
+
+<div class="card" id="matCard" style="display:none">
+  <div class="card-label">02 — Augmented Matrix [A | b]</div>
+  
+  <!-- Equations Display -->
+  <div id="equationsBox" class="eq-display"></div>
+  
+  <div class="matrix-wrap">
+    <div id="colHeads" class="col-heads"></div>
+    <div id="matGrid"></div>
+  </div>
+  <div class="btns">
+    <button class="btn btn-solve" onclick="solve()">▶ Solve</button>
+    <button class="btn btn-ex" onclick="loadExample()">Example</button>
+    <button class="btn btn-clr" onclick="clearGrid()">Clear</button>
+  </div>
+</div>
+
+<div id="output"></div>
+
+</div>
+
+<script>
+const EPS = 1e-9;
+let M=3, N=3;
+
+/* ── fmt ── */
+function gcd(a,b){a=Math.abs(Math.round(a));b=Math.abs(Math.round(b));while(b){let t=b;b=a%b;a=t;}return a||1;}
+function fmt(v){
+  if(Math.abs(v)<EPS)return'0';
+  const r=Math.round(v*1e9)/1e9;
+  if(Math.abs(r-Math.round(r))<1e-6)return String(Math.round(r));
+  const sign=r<0?-1:1, abs=Math.abs(r);
+  let bN=0,bD=1,bE=Infinity;
+  for(let d=1;d<=1000;d++){const n=Math.round(abs*d),e=Math.abs(abs-n/d);if(e<1e-7){bN=n;bD=d;bE=e;break;}if(e<bE){bN=n;bD=d;bE=e;}}
+  if(bE<1e-6&&bD>1){const g=gcd(bN,bD),n2=bN/g,d2=bD/g;if(d2<=200)return(sign<0?'-':'')+( d2===1?String(n2):n2+'/'+d2);}
+  return r.toFixed(3).replace(/\.?0+$/,'');
+}
+
+/* subscript digits helper */
+const SUB = ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉'];
+function sub(n){
+  if(n===0) return SUB[0];
+  let s='', num=Math.abs(n);
+  while(num>0){ s=SUB[num%10]+s; num=Math.floor(num/10); }
+  return s;
+}
+
+/* ── Build Grid ── */
+function buildGrid(){
+  M=Math.max(1,Math.floor(+document.getElementById('numM').value||3));
+  N=Math.max(1,Math.floor(+document.getElementById('numN').value||3));
+
+  // equations display
+  const eqBox=document.getElementById('equationsBox');
+  let eqHTML='';
+  for(let i=1;i<=M;i++){
+    let terms=[];
+    for(let j=1;j<=N;j++){
+      terms.push(`a<sub class="sub">${i}${j}</sub>x<sub class="sub">${j}</sub>`);
+    }
+    eqHTML+=`<div class="eq-line">${terms.join(' + ')} = b<sub class="sub">${i}</sub></div>`;
+  }
+  eqHTML+=`<div class="eq-hint">Enter coefficients a<sub class="sub">ij</sub> and constants b<sub class="sub">i</sub> in the matrix below</div>`;
+  eqBox.innerHTML=eqHTML;
+
+  // col headers
+  const ch=document.getElementById('colHeads');
+  ch.innerHTML='<div class="col-head" style="width:44px"></div>';
+  for(let j=0;j<N;j++) ch.innerHTML+=`<div class="col-head">x${j+1}</div>`;
+  ch.innerHTML+='<div class="col-head sep-head"></div>';
+  ch.innerHTML+='<div class="col-head b-head">b</div>';
+
+  // rows
+  const g=document.getElementById('matGrid');
+  g.innerHTML='';
+  for(let i=0;i<M;i++){
+    const row=document.createElement('div'); row.className='mrow';
+    row.innerHTML=`<div class="row-lbl">R${i+1}</div>`;
+    for(let j=0;j<N;j++){
+      const inp=document.createElement('input');
+      inp.type='number'; inp.className='cell'; inp.id=`a_${i}_${j}`; inp.placeholder=`a${sub(i+1)}${sub(j+1)}`; inp.step='any';
+      inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=document.getElementById(`a_${i}_${j+1}`)||document.getElementById(`b_${i}`);if(nx)nx.focus();}});
+      row.appendChild(inp);
+    }
+    const sep=document.createElement('div'); sep.className='aug-sep'; row.appendChild(sep);
+    const b=document.createElement('input');
+    b.type='number'; b.className='cell b-cell'; b.id=`b_${i}`; b.placeholder=`b${sub(i+1)}`; b.step='any';
+    b.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=document.getElementById(`a_${i+1}_0`);if(nx)nx.focus();else solve();}});
+    row.appendChild(b);
+    g.appendChild(row);
+  }
+  document.getElementById('matCard').style.display='block';
+  document.getElementById('output').style.display='none';
+  document.getElementById('output').innerHTML='';
+}
+
+function getMatrix(){
+  const mat=[];
+  for(let i=0;i<M;i++){
+    const row=[];
+    for(let j=0;j<N;j++) row.push(parseFloat(document.getElementById(`a_${i}_${j}`).value)||0);
+    row.push(parseFloat(document.getElementById(`b_${i}`).value)||0);
+    mat.push(row);
+  }
+  return mat;
+}
+
+function loadExample(){
+  document.getElementById('numM').value=3;
+  document.getElementById('numN').value=3;
+  buildGrid();
+  const ex=[[1,1,1,6],[2,1,-1,1],[1,-1,2,5]];
+  for(let i=0;i<3;i++){for(let j=0;j<3;j++)document.getElementById(`a_${i}_${j}`).value=ex[i][j];document.getElementById(`b_${i}`).value=ex[i][3];}
+}
+
+function clearGrid(){
+  for(let i=0;i<M;i++){for(let j=0;j<N;j++)document.getElementById(`a_${i}_${j}`).value='';document.getElementById(`b_${i}`).value='';}
+}
+
+/* ── Matrix HTML ── */
+function matHTML(A, m, n, pivR=-1, pivC=-1){
+  let h='<div class="mat-wrap"><table class="mat"><thead><tr><th></th>';
+  for(let j=0;j<n;j++) h+=`<th>x${j+1}</th>`;
+  h+='<th>b</th></tr></thead><tbody>';
+  for(let i=0;i<m;i++){
+    h+=`<tr><td class="rl">R${i+1}</td>`;
+    for(let j=0;j<=n;j++){
+      const val=A[i][j];
+      let cls='';
+      if(j===n) cls=' class="bc"';
+      else if(i===pivR&&j===pivC) cls=' class="pivot-cell"';
+      else if(Math.abs(val)<EPS) cls=' class="zero"';
+      h+=`<td${cls}>${fmt(val)}</td>`;
+    }
+    h+='</tr>';
+  }
+  h+='</tbody></table></div>';
+  return h;
+}
+
+/* ── Step card ── */
+function stepCard(type, title, opText, A, m, n, pivR=-1, pivC=-1, delay=0){
+  const d=document.createElement('div');
+  d.className='step'; d.style.animationDelay=(delay*0.05)+'s';
+  const icon={initial:'·',swap:'⇅',scale:'÷',elim:'→',pivot:'◆',result:'✓',nosol:'✗',inf:'∞'}[type]||'·';
+  d.innerHTML=`
+    <div class="step-head ${type}"><span>${icon}</span><span>${title}</span></div>
+    <div class="step-body">
+      ${opText?`<div class="op-box ${type}-op">${opText}</div>`:''}
+      ${A?matHTML(A,m,n,pivR,pivC):''}
+    </div>`;
+  return d;
+}
+
+/* ── Main Solve ── */
+function solve(){
+  const orig=getMatrix();
+  const m=M, n=N;
+  const out=document.getElementById('output');
+  out.innerHTML=''; out.style.display='block';
+
+  let A=orig.map(r=>[...r]);
+  let delay=0;
+
+  // Initial
+  out.appendChild(stepCard('initial','Initial Augmented Matrix [A | b]',null,A,m,n,-1,-1,delay++));
+
+  let pivRow=0;
+  for(let col=0; col<n && pivRow<m; col++){
+    // find best pivot
+    let best=pivRow;
+    for(let i=pivRow+1;i<m;i++) if(Math.abs(A[i][col])>Math.abs(A[best][col])) best=i;
+    if(Math.abs(A[best][col])<EPS) continue;
+
+    // swap
+    if(best!==pivRow){
+      [A[pivRow],A[best]]=[A[best],A[pivRow]];
+      out.appendChild(stepCard('swap',`Row Swap: R${pivRow+1} ↔ R${best+1}`,`R${pivRow+1} ↔ R${best+1}`,A,m,n,pivRow,col,delay++));
+    }
+
+    // show pivot
+    out.appendChild(stepCard('pivot',`Pivot Element: Row R${pivRow+1}, Column x${col+1}`,`Using R${pivRow+1} as pivot row to eliminate column x${col+1}`,A,m,n,pivRow,col,delay++));
+
+    // eliminate below
+    for(let i=pivRow+1;i<m;i++){
+      if(Math.abs(A[i][col])<EPS) continue;
+      const f=A[i][col]/A[pivRow][col];
+      const fStr=fmt(f);
+      const opStr= f>0
+        ? `R${i+1}  =  R${i+1}  −  (${fStr}) × R${pivRow+1}`
+        : `R${i+1}  =  R${i+1}  +  (${fmt(-f)}) × R${pivRow+1}`;
+      for(let j=col;j<=n;j++){A[i][j]-=f*A[pivRow][j];if(Math.abs(A[i][j])<EPS)A[i][j]=0;}
+      out.appendChild(stepCard('elim','Elimination Step',opStr,A,m,n,i,col,delay++));
+    }
+    pivRow++;
+  }
+
+  /* ── Rank ── */
+  let rank=0, noSol=false;
+  for(let i=0;i<m;i++){
+    let zeroCoef=true;
+    for(let j=0;j<n;j++) if(Math.abs(A[i][j])>EPS){zeroCoef=false;break;}
+    if(zeroCoef&&Math.abs(A[i][n])>EPS) noSol=true;
+    else if(!zeroCoef) rank++;
+  }
+
+  /* ── Analysis card ── */
+  const ac=document.createElement('div'); ac.className='analysis'; ac.style.animationDelay=(delay*0.05)+'s'; delay++;
+
+  if(noSol){
+    let contra='';
+    for(let i=0;i<m;i++){
+      let zc=true; for(let j=0;j<n;j++) if(Math.abs(A[i][j])>EPS){zc=false;break;}
+      if(zc&&Math.abs(A[i][n])>EPS) contra+=`<div class="back-step" style="color:var(--accent2)">Row R${i+1} :  0 = ${fmt(A[i][n])}  →  Contradiction!</div>`;
+    }
+    ac.innerHTML=`
+      <div class="step-head nosol">✗ Result Analysis — No Solution</div>
+      <div class="rank-bars">
+        <div class="rb"><div class="v" style="color:var(--accent2)">${rank}</div><div class="l">r (Rank)</div></div>
+        <div class="rb"><div class="sym" style="color:var(--accent2)">≠</div></div>
+        <div class="rb"><div class="v">${n}</div><div class="l">n (Unknowns)</div></div>
+      </div>
+      <div class="compare-box no">
+        <div class="compare-rule">⚠  A zero-row appeared with b ≠ 0  →  Inconsistent System</div>
+        <div class="compare-note">One or more equations contradict each other. No values of x satisfy all equations simultaneously.</div>
+      </div>
+      <div class="sol-section">${contra}<div class="final-box" style="border-color:rgba(255,101,132,0.25);background:rgba(255,101,132,0.04)"><span class="badge no">No Solution</span><br><span style="color:var(--accent2);font-size:0.85rem">The system is inconsistent.</span></div></div>`;
+
+  } else if(rank<n){
+    /* Infinite solutions */
+    let basic=new Array(n).fill(false), bv=[], fv=[];
+    for(let i=0;i<rank;i++) for(let j=0;j<n;j++) if(Math.abs(A[i][j])>EPS){basic[j]=true;bv.push(j);break;}
+    for(let j=0;j<n;j++) if(!basic[j]) fv.push(j);
+
+    let solLines='';
+    for(let i=0;i<rank;i++){
+      const b=bv[i]; let expr=fmt(A[i][n]/A[i][b]);
+      for(const f of fv){
+        if(Math.abs(A[i][f])<EPS) continue;
+        const c=-A[i][f]/A[i][b];
+        expr+= c>0 ? ` + ${fmt(c)}·x${f+1}` : ` − ${fmt(-c)}·x${f+1}`;
+      }
+      solLines+=`<div class="sol-line">x${b+1}  =  ${expr}</div>`;
+    }
+    for(const f of fv) solLines+=`<div class="sol-line free">x${f+1}  =  free parameter (∈ ℝ)</div>`;
+
+    ac.innerHTML=`
+      <div class="step-head inf">∞ Result Analysis — Infinite Solutions</div>
+      <div class="rank-bars">
+        <div class="rb"><div class="v" style="color:var(--yellow)">${rank}</div><div class="l">r (Rank A)</div></div>
+        <div class="rb"><div class="sym" style="color:var(--yellow)">&lt;</div></div>
+        <div class="rb"><div class="v">${n}</div><div class="l">n (Unknowns)</div></div>
+        <div class="rb"><div class="v" style="color:var(--accent2)">${n-rank}</div><div class="l">Free Vars</div></div>
+      </div>
+      <div class="compare-box inf">
+        <div class="compare-rule">∞  Since r = ${rank}  &lt;  n = ${n}  →  ${n-rank} free variable${n-rank>1?'s':''}</div>
+        <div class="compare-note">The rank is less than the number of unknowns. Assign any real value to the free variable${n-rank>1?'s':''} — infinitely many solutions exist.</div>
+      </div>
+      <div class="sol-section">
+        <div class="sol-title">General Solution</div>
+        <div class="final-box inf-box"><span class="badge inf">Infinite Solutions</span>${solLines}</div>
+      </div>`;
+
+  } else {
+    /* Unique solution — back substitution */
+    const sol=new Array(n).fill(0);
+    const bsSteps=[];
+
+    for(let i=rank-1;i>=0;i--){
+      let pc=-1; for(let j=0;j<n;j++) if(Math.abs(A[i][j])>EPS){pc=j;break;}
+      if(pc===-1) continue;
+      let rhs=A[i][n];
+      let subs='';
+      for(let j=pc+1;j<n;j++) if(Math.abs(A[i][j])>EPS){rhs-=A[i][j]*sol[j];subs+=`  [x${j+1}=${fmt(sol[j])}]`;}
+      sol[pc]=rhs/A[i][pc];
+      const eq= Math.abs(A[i][pc]-1)<EPS
+        ? `x${pc+1}  =  ${fmt(rhs)}${subs}  =  <strong style="color:var(--accent3)">${fmt(sol[pc])}</strong>`
+        : `x${pc+1}  =  ${fmt(rhs)} / ${fmt(A[i][pc])}${subs}  =  <strong style="color:var(--accent3)">${fmt(sol[pc])}</strong>`;
+      bsSteps.push(eq);
+    }
+
+    const bsHTML=bsSteps.map(s=>`<div class="back-step">${s}</div>`).join('');
+    let solLines='';
+    for(let i=0;i<n;i++) solLines+=`<div class="sol-line">x${i+1}  =  <strong>${fmt(sol[i])}</strong></div>`;
+
+    ac.innerHTML=`
+      <div class="step-head result">✓ Result Analysis — Unique Solution</div>
+      <div class="rank-bars">
+        <div class="rb"><div class="v" style="color:var(--accent3)">${rank}</div><div class="l">r (Rank A)</div></div>
+        <div class="rb"><div class="sym" style="color:var(--accent3)">=</div></div>
+        <div class="rb"><div class="v">${n}</div><div class="l">n (Unknowns)</div></div>
+      </div>
+      <div class="compare-box ok">
+        <div class="compare-rule">✓  Since r = ${rank}  =  n = ${n}  →  Unique Solution</div>
+        <div class="compare-note">The rank equals the number of unknowns. Every variable has exactly one determined value.</div>
+      </div>
+      <div class="sol-section">
+        <div class="sol-title">Back Substitution</div>
+        ${bsHTML}
+        <div class="final-box"><span class="badge ok">Final Answer</span>${solLines}</div>
+      </div>`;
+  }
+
+  out.appendChild(ac);
+  ac.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+window.onload=()=>{buildGrid();loadExample();};
+</script>
+</body>
+</html>
