@@ -3,66 +3,126 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gauss Elimination - Professional Academic Solver</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<title>Linear Algebra — Gauss Elimination Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0f; --surface: #12121a; --border: #2a2a40;
-    --accent: #6c63ff; --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
+    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a40;
+    --accent: #6c63ff; --accent2: #ff6584; --accent3: #43e97b;
+    --text: #e8e8f0; --muted: #6b6b8a;
   }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 40px 20px; line-height: 1.6; }
-  .container { max-width: 900px; margin: 0 auto; }
-  
-  /* Input Section */
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; margin-bottom: 25px; }
+  body {
+    background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif;
+    min-height: 100vh; padding: 40px 20px;
+  }
+
+  /* Background Grid Effect */
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; }
+
+  /* Hero Section */
+  .hero { text-align: center; padding: 40px 0; }
+  .hero-tag {
+    display: inline-block; font-family: 'Space Mono'; font-size: 11px;
+    letter-spacing: 3px; color: var(--accent); border: 1px solid rgba(108,99,255,0.4);
+    padding: 5px 14px; border-radius: 20px; margin-bottom: 20px; text-transform: uppercase;
+  }
+  .hero h1 { font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+  /* Input Card */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px; margin-bottom: 24px;
+    position: relative; overflow: hidden;
+  }
+  .card-title {
+    font-size: 0.75rem; font-family: 'Space Mono'; letter-spacing: 2px;
+    color: var(--accent); text-transform: uppercase; margin-bottom: 24px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Matrix Styling */
   .matrix-grid { display: grid; gap: 10px; margin: 20px 0; overflow-x: auto; }
-  .matrix-row { display: flex; align-items: center; gap: 8px; }
+  .matrix-row { display: flex; align-items: center; gap: 8px; min-width: max-content; }
   
-  /* Remove number arrows */
+  /* Remove Spinners */
   input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   input[type=number] { -moz-appearance: textfield; }
 
-  input.cell { 
-    background: #1a1a26; border: 1px solid var(--border); color: white; 
-    padding: 10px; border-radius: 8px; width: 65px; text-align: center; 
+  input.cell {
+    background: var(--surface2); border: 1px solid var(--border); color: white;
+    padding: 12px; border-radius: 10px; width: 75px; text-align: center;
     font-family: 'Space Mono'; outline: none; transition: 0.3s;
   }
-  input.cell:focus { border-color: var(--accent); background: rgba(108,99,255,0.1); }
-  .eqn-preview { font-family: 'Space Mono'; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 10px; margin-top: 15px; }
+  input.cell:focus { border-color: var(--accent); background: rgba(108,99,255,0.1); box-shadow: 0 0 15px rgba(108,99,255,0.2); }
+  .b-cell { background: rgba(108,99,255,0.08) !important; border-color: rgba(108,99,255,0.3) !important; }
 
-  /* Output Styling */
-  .step-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; background: var(--surface); overflow: hidden; }
-  .step-op { padding: 12px 20px; background: rgba(108,99,255,0.1); color: var(--accent); font-family: 'Space Mono'; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
-  .mat-table { border-collapse: collapse; margin: 20px auto; font-family: 'Space Mono'; }
-  .mat-table td { padding: 10px 18px; border: 1px solid var(--border); text-align: center; min-width: 60px; }
-  .aug-sep { border-left: 2px solid var(--accent) !important; color: var(--accent3); }
-
-  .analysis-box { background: rgba(67,233,123,0.05); border: 1px solid var(--accent3); padding: 25px; border-radius: 12px; margin-top: 30px; }
-  .btn { 
-    background: var(--accent); color: white; border: none; padding: 15px; 
-    border-radius: 10px; cursor: pointer; font-weight: 800; width: 100%; font-family: 'Syne';
+  .eqn-preview {
+    font-family: 'Space Mono'; font-size: 0.9rem; padding: 20px;
+    background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed var(--border);
   }
+
+  /* Steps & Table Styling */
+  .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; overflow: hidden; animation: slideUp 0.4s ease; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  
+  .step-header { padding: 14px 20px; font-family: 'Space Mono'; font-size: 0.75rem; letter-spacing: 1px; background: rgba(108,99,255,0.08); color: var(--accent); border-bottom: 1px solid var(--border); }
+  .step-body { padding: 20px; }
+  .step-op { font-family: 'Space Mono'; font-size: 0.85rem; padding: 10px 15px; background: var(--surface2); border-radius: 8px; border-left: 3px solid var(--accent); margin-bottom: 15px; }
+
+  .mat-table { border-collapse: collapse; margin: 0 auto; font-family: 'Space Mono'; font-size: 0.9rem; }
+  .mat-table td { padding: 10px 18px; border: 1px solid var(--border); text-align: center; min-width: 65px; }
+  .aug-line { border-left: 2px solid var(--accent) !important; }
+
+  .btn {
+    padding: 15px 30px; border-radius: 12px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--accent), #8a84ff); color: white;
+    font-weight: 700; width: 100%; font-family: 'Syne'; transition: 0.3s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(108,99,255,0.3); }
+
+  .analysis { border: 1px solid var(--accent3); padding: 25px; border-radius: 16px; background: rgba(67,233,123,0.03); margin-top: 30px; }
 </style>
 </head>
 <body>
 
 <div class="container">
+  <div class="hero">
+    <div class="hero-tag">Academic Engine</div>
+    <h1>Gauss Solver</h1>
+  </div>
+
   <div class="card">
-    <h2 style="margin-bottom:15px; color:var(--accent)">1. Input System</h2>
-    <div style="display:flex; gap:15px; align-items:center; margin-bottom:20px;">
-      <label>Equations:</label> <input type="number" id="rows" value="3" class="cell" onchange="initGrid()">
-      <label>Variables:</label> <input type="number" id="cols" value="3" class="cell" onchange="initGrid()">
+    <div class="card-title">01 — System Configuration</div>
+    <div style="display:flex; gap:15px; margin-bottom:25px;">
+      <div style="flex:1">
+        <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:8px;">EQUATIONS</label>
+        <input type="number" id="rows" value="3" class="cell" style="width:100%" onchange="initGrid()">
+      </div>
+      <div style="flex:1">
+        <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:8px;">UNKNOWNS</label>
+        <input type="number" id="cols" value="3" class="cell" style="width:100%" onchange="initGrid()">
+      </div>
     </div>
-    
+
+    <div class="card-title">02 — Augmented Matrix</div>
     <div id="grid" class="matrix-grid"></div>
     
-    <div id="equations" class="eqn-preview">
-      <div style="color:var(--muted); font-size:0.7rem; margin-bottom:5px;">REAL-TIME EQUATIONS:</div>
+    <div class="eqn-preview">
+      <div style="color:var(--accent); font-size:0.7rem; margin-bottom:10px;">SYSTEM OF EQUATIONS:</div>
       <div id="eqnList"></div>
     </div>
 
-    <button class="btn" style="margin-top:20px;" onclick="solve()">▶ CALCULATE STEP-BY-STEP</button>
+    <button class="btn" style="margin-top:25px" onclick="solve()">RUN CALCULATION</button>
   </div>
 
   <div id="output"></div>
@@ -70,32 +130,31 @@
 
 <script>
 function initGrid() {
-    const r = +document.getElementById('rows').value;
-    const c = +document.getElementById('cols').value;
+    const r = +document.getElementById('rows').value || 3;
+    const c = +document.getElementById('cols').value || 3;
     const g = document.getElementById('grid');
     g.innerHTML = '';
     for(let i=0; i<r; i++) {
         let rowDiv = document.createElement('div');
         rowDiv.className = 'matrix-row';
         for(let j=0; j<c; j++) {
-            rowDiv.innerHTML += `<input type="number" class="cell" id="v_${i}_${j}" oninput="updateEqns()" onkeydown="moveFocus(event, ${i}, ${j})">`;
+            rowDiv.innerHTML += `<input type="number" class="cell" id="v_${i}_${j}" placeholder="0" oninput="updateEqns()" onkeydown="handleNav(event, ${i}, ${j})">`;
         }
-        rowDiv.innerHTML += `<span style="color:var(--accent); font-weight:bold;">|</span>`;
-        rowDiv.innerHTML += `<input type="number" class="cell" id="b_${i}" oninput="updateEqns()" onkeydown="moveFocus(event, ${i}, ${c})">`;
+        rowDiv.innerHTML += `<span style="color:var(--border); font-size:1.5rem; margin:0 5px;">|</span>`;
+        rowDiv.innerHTML += `<input type="number" class="cell b-cell" id="b_${i}" placeholder="b" oninput="updateEqns()" onkeydown="handleNav(event, ${i}, ${c})">`;
         g.appendChild(rowDiv);
     }
     updateEqns();
 }
 
-function moveFocus(e, r, c) {
-    let targetRows = +document.getElementById('rows').value;
-    let targetCols = +document.getElementById('cols').value;
+function handleNav(e, r, c) {
+    const rows = +document.getElementById('rows').value;
+    const cols = +document.getElementById('cols').value;
     let next;
     if(e.key === "ArrowRight") next = document.getElementById(`v_${r}_${c+1}`) || document.getElementById(`b_${r}`);
     if(e.key === "ArrowLeft")  next = document.getElementById(`v_${r}_${c-1}`);
     if(e.key === "ArrowDown")  next = document.getElementById(`v_${r+1}_${c}`) || document.getElementById(`b_${r+1}`);
     if(e.key === "ArrowUp")    next = document.getElementById(`v_${r-1}_${c}`) || document.getElementById(`b_${r-1}`);
-    
     if(next) { e.preventDefault(); next.focus(); }
 }
 
@@ -110,9 +169,9 @@ function updateEqns() {
             if(val) parts.push(`${val}x<sub>${j+1}</sub>`);
         }
         let bVal = document.getElementById(`b_${i}`).value || '0';
-        html += `<div>${parts.join(' + ').replace(/\+ -/g, '- ')} = ${bVal}</div>`;
+        html += `<div style="margin-bottom:5px;">${parts.length ? parts.join(' + ').replace(/\+ -/g, '- ') : '0'} = ${bVal}</div>`;
     }
-    document.getElementById('eqnList').innerHTML = html || 'Waiting for input...';
+    document.getElementById('eqnList').innerHTML = html || 'Waiting for coefficients...';
 }
 
 function solve() {
@@ -127,7 +186,7 @@ function solve() {
     }
 
     const out = document.getElementById('output');
-    out.innerHTML = '<h2 style="margin:20px 0;">Solution Steps</h2>';
+    out.innerHTML = '<div class="card-title" style="margin:20px 0">03 — Processing Steps</div>';
 
     let r = 0;
     for(let c=0; c<n && r<m; c++) {
@@ -137,16 +196,15 @@ function solve() {
 
         if(pivot !== r) {
             [mat[r], mat[pivot]] = [mat[pivot], mat[r]];
-            addStep(mat, n, `Swap Row ${r+1} with Row ${pivot+1}`, out);
+            addStep(mat, n, `Swapped R${r+1} with R${pivot+1}`, out);
         }
 
         for(let i=0; i<m; i++) {
             if(i !== r && Math.abs(mat[i][c]) > 1e-10) {
-                let pVal = mat[r][c]; // القيمة الأساسية
-                let target = mat[i][c]; // القيمة اللي عايزين نصفرها
-                // R_i = (pVal)*R_i - (target)*R_r -> لضمان أرقام صحيحة
-                for(let j=c; j<=n; j++) mat[i][j] = (pVal * mat[i][j]) - (target * mat[r][j]);
-                addStep(mat, n, `R${i+1} = (${pVal})R${i+1} - (${target})R${r+1}`, out);
+                let a = mat[r][c], b = mat[i][c];
+                // Integer Method: R_i = a*R_i - b*R_r (No Fractions)
+                for(let j=c; j<=n; j++) mat[i][j] = (a * mat[i][j]) - (b * mat[r][j]);
+                addStep(mat, n, `Operation: R${i+1} = (${a})R${i+1} - (${b})R${r+1}`, out);
             }
         }
         r++;
@@ -155,40 +213,36 @@ function solve() {
 }
 
 function addStep(mat, n, op, container) {
-    let html = `<div class="step-card"><div class="step-op">${op}</div><table class="mat-table">`;
+    let html = `<div class="step-card"><div class="step-header">${op}</div><div class="step-body"><table class="mat-table">`;
     mat.forEach(r => {
         html += `<tr>`;
-        r.forEach((v, idx) => html += `<td class="${idx===n?'aug-sep':''}">${Math.round(v)}</td>`);
+        r.forEach((v, idx) => html += `<td class="${idx===n?'aug-line':''}">${Math.round(v)}</td>`);
         html += `</tr>`;
     });
-    container.innerHTML += html + `</table></div>`;
+    container.innerHTML += html + `</table></div></div>`;
 }
 
 function finalize(mat, m, n, container) {
     let rankA = 0, rankAB = 0;
     for(let i=0; i<m; i++) {
-        let rowA = false, rowAB = false;
-        for(let j=0; j<n; j++) if(Math.abs(mat[i][j]) > 1e-10) rowA = true;
-        for(let j=0; j<=n; j++) if(Math.abs(mat[i][j]) > 1e-10) rowAB = true;
-        if(rowA) rankA++; if(rowAB) rankAB++;
+        let rA = false, rAB = false;
+        for(let j=0; j<n; j++) if(Math.abs(mat[i][j]) > 1e-10) rA = true;
+        for(let j=0; j<=n; j++) if(Math.abs(mat[i][j]) > 1e-10) rAB = true;
+        if(rA) rankA++; if(rAB) rankAB++;
     }
 
-    let status = (rankA < rankAB) ? "No Solution (Inconsistent)" : (rankA === n ? "Unique Solution" : "Infinite Solutions");
+    let status = (rankA < rankAB) ? "No Solution" : (rankA === n ? "Unique Solution" : "Infinite Solutions");
+    let html = `<div class="analysis"><h3>System Analysis</h3>
+                <p style="margin:10px 0; font-family:'Space Mono';">Rank(A): ${rankA} | Rank(A|B): ${rankAB}</p>
+                <p style="color:var(--accent3); font-weight:700;">Status: ${status}</p><hr style="opacity:0.1; margin:15px 0;">`;
     
-    let html = `<div class="analysis-box">
-        <h3>Final System Analysis</h3>
-        <p>Rank(A) = <b>${rankA}</b> | Rank(A|B) = <b>${rankAB}</b></p>
-        <p style="color:var(--accent3); margin:10px 0;">Status: <b>${status}</b></p><hr style="opacity:0.1; margin:15px 0;">`;
-
     if(rankA === rankAB) {
         for(let i=0; i<n; i++) {
             let pRow = -1;
             for(let k=0; k<m; k++) if(Math.abs(mat[k][i]) > 1e-10) { pRow = k; break; }
             if(pRow !== -1) {
                 let res = mat[pRow][n] / mat[pRow][i];
-                html += `<div style="font-family:'Space Mono'">x<sub>${i+1}</sub> = ${Number.isInteger(res)?res:res.toFixed(2)}</div>`;
-            } else {
-                html += `<div style="color:var(--muted)">x<sub>${i+1}</sub> = Free Parameter</div>`;
+                html += `<div style="font-family:'Space Mono'; margin:5px 0;">x<sub>${i+1}</sub> = <b>${Number.isInteger(res)?res:res.toFixed(2)}</b></div>`;
             }
         }
     }
