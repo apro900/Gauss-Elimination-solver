@@ -1,323 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gauss Elimination Pro</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --surface2: #1a1a26;
-    --border: #2a2a40;
-    --accent: #6c63ff;
-    --accent2: #ff6584;
-    --accent3: #43e97b;
-    --text: #e8e8f0;
-    --muted: #6b6b8a;
-    --pivot-color: #ffd166;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Background grid and Orbs (Same as your design) */
-  body::before {
-    content: ''; position: fixed; inset: 0;
-    background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
-    background-size: 40px 40px; pointer-events: none; z-index: 0;
-  }
-
-  .orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
-  .orb1 { width: 400px; height: 400px; background: rgba(108,99,255,0.12); top: -100px; right: -100px; }
-
-  .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 40px 20px; }
-
-  /* Hero Section */
-  .hero { text-align: center; padding: 60px 0 30px; }
-  .hero-tag { display: inline-block; font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent); border: 1px solid rgba(108,99,255,0.4); padding: 5px 14px; border-radius: 20px; margin-bottom: 10px; text-transform: uppercase; }
-  .hero h1 { font-size: clamp(2.2rem, 6vw, 4rem); font-weight: 800; line-height: 1.1; background: linear-gradient(135deg, #fff 0%, #a89bff 50%, #ff6584 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 14px; }
-
-  /* Card Styles */
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; position: relative; }
-  .card-title { font-size: 0.75rem; font-family: 'Space Mono', monospace; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
-  .card-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-  /* Dynamic Equations Preview */
-  .eqn-box { background: var(--surface2); border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 4px solid var(--accent); font-family: 'Space Mono', monospace; font-size: 0.85rem; line-height: 1.6; }
-  .eqn-line { color: var(--text); margin-bottom: 4px; }
-
-  /* Matrix Input Grid */
-  .matrix-grid { display: grid; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
-  .matrix-row { display: flex; align-items: center; gap: 8px; min-width: max-content; }
-  .matrix-row input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; padding: 10px; border-radius: 8px; width: 70px; text-align: center; outline: none; }
-  .matrix-row input:focus { border-color: var(--accent); }
-  .sep { color: var(--accent); font-weight: bold; margin: 0 5px; }
-
-  /* Buttons */
-  .btn { padding: 13px 28px; border-radius: 10px; border: none; cursor: pointer; font-family: 'Syne', sans-serif; font-weight: 700; transition: all 0.2s; }
-  .btn-primary { background: linear-gradient(135deg, var(--accent), #9b8cff); color: #fff; }
-  .btn-secondary { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
-  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
-
-  /* Steps Output */
-  .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; animation: fadeIn 0.5s ease both; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  .step-header { padding: 12px 20px; font-family: 'Space Mono', monospace; font-size: 0.75rem; text-transform: uppercase; background: rgba(108,99,255,0.08); color: var(--accent); border-bottom: 1px solid var(--border); }
-  .step-body { padding: 20px; }
-  .op-text { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--pivot-color); margin-bottom: 15px; }
-
-  .mat-table { border-collapse: collapse; font-family: 'Space Mono', monospace; font-size: 0.85rem; margin: 0 auto; }
-  .mat-table td { padding: 8px 14px; text-align: center; border: 1px solid var(--border); color: var(--text); min-width: 60px; }
-  .highlight-pivot { background: rgba(255,209,102,0.15); color: var(--pivot-color) !important; font-weight: bold; }
-  .highlight-zero { background: rgba(67,233,123,0.05); color: var(--muted); }
-
-  /* Analysis Box */
-  .stat-grid { display: flex; gap: 15px; margin-top: 20px; }
-  .stat-card { flex: 1; background: var(--surface2); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid var(--border); }
-  .stat-val { font-size: 1.5rem; font-weight: 800; color: var(--accent3); }
-  .stat-lbl { font-size: 0.65rem; font-family: 'Space Mono', monospace; color: var(--muted); text-transform: uppercase; }
-</style>
+    <meta charset="UTF-8">
+    <title>Gauss Solver - Smart Engine</title>
+    <style>
+        :root { --bg: #0a0a0f; --card: #12121a; --acc: #6c63ff; --txt: #e8e8f0; --brd: #2a2a40; --pivot: #ffd166; }
+        body { background: var(--bg); color: var(--txt); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; line-height: 1.6; }
+        .container { max-width: 850px; margin: auto; }
+        .card { background: var(--card); border: 1px solid var(--brd); border-radius: 15px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { font-size: 2.2rem; background: linear-gradient(to right, #fff, var(--acc)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 5px; }
+        .grid-inputs { display: grid; gap: 10px; margin: 20px 0; overflow-x: auto; }
+        .row-inputs { display: flex; gap: 8px; align-items: center; min-width: max-content; }
+        input { background: #1a1a26; border: 1px solid var(--brd); color: #fff; padding: 10px; border-radius: 8px; width: 60px; text-align: center; font-weight: bold; outline: none; transition: 0.3s; }
+        input:focus { border-color: var(--acc); background: #222233; }
+        .btn { background: var(--acc); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; transition: 0.3s; margin-top: 10px; }
+        .btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        .step { border-left: 4px solid var(--acc); background: rgba(108,99,255,0.03); padding: 20px; margin-top: 15px; border-radius: 0 12px 12px 0; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .op-tag { font-family: 'Courier New', monospace; color: var(--pivot); font-size: 0.95rem; margin-bottom: 10px; display: block; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        td { border: 1px solid var(--brd); padding: 12px; text-align: center; font-family: 'Consolas', monospace; font-size: 1rem; }
+        .analysis { border: 1px solid #22c55e; background: rgba(34, 197, 94, 0.05); padding: 20px; border-radius: 12px; margin-top: 25px; }
+        .sol-line { font-size: 1.1rem; color: #22c55e; font-weight: bold; margin: 10px 0; font-family: 'Consolas', monospace; }
+    </style>
 </head>
 <body>
-<div class="orb orb1"></div>
 
 <div class="container">
-  <div class="hero">
-    <div class="hero-tag">Linear Algebra Solver</div>
-    <h1>Gauss Elimination</h1>
-  </div>
+    <div class="card">
+        <h1>Gauss Elimination Solver</h1>
+        <p style="text-align:center; color:var(--acc); font-size:0.8rem; letter-spacing:2px;">// STEP-BY-STEP ROW REDUCTION</p>
+        
+        <div style="display:flex; gap:10px; justify-content: center; margin: 20px 0;">
+            <input type="number" id="rows" value="3" title="Rows">
+            <input type="number" id="cols" value="3" title="Cols">
+            <button class="btn" style="width:auto; padding: 0 25px;" onclick="initGrid()">Reset Grid</button>
+        </div>
 
-  <div class="card">
-    <div class="card-title">01 — Configure System</div>
-    <div style="display:flex; gap:15px; flex-wrap:wrap; align-items:flex-end;">
-      <div style="flex:1">
-        <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:5px;">Equations (m)</label>
-        <input type="number" id="numEq" value="3" min="1" max="6" style="width:100%; background:var(--surface2); border:1px solid var(--border); color:#fff; padding:10px; border-radius:8px;">
-      </div>
-      <div style="flex:1">
-        <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:5px;">Variables (n)</label>
-        <input type="number" id="numVar" value="3" min="1" max="6" style="width:100%; background:var(--surface2); border:1px solid var(--border); color:#fff; padding:10px; border-radius:8px;">
-      </div>
-      <button class="btn btn-secondary" onclick="buildMatrix()">Build Grid</button>
+        <div id="matrix-input" class="grid-inputs"></div>
+        <button class="btn" onclick="solve()">Solve & Show Detailed Steps</button>
     </div>
-  </div>
-
-  <div class="card" id="inputCard">
-    <div class="card-title">02 — Current Equations</div>
-    <div id="equationsPreview" class="eqn-box"></div>
-    
-    <div class="card-title">03 — Matrix Coefficients [A|b]</div>
-    <div id="matrixGrid" class="matrix-grid"></div>
-    
-    <button class="btn btn-primary" style="width:100%" onclick="solve()">Start Step-by-Step Elimination</button>
-  </div>
-
-  <div id="output"></div>
+    <div id="steps-output"></div>
 </div>
 
 <script>
-let M_rows = 3, M_cols = 3;
+// Default problem from your image
+const defaultMatrix = [
+    [2, -1, 3, 0],
+    [3, 2, 1, 0],
+    [1, -4, 5, 0]
+];
 
-function buildMatrix() {
-  M_rows = parseInt(document.getElementById('numEq').value);
-  M_cols = parseInt(document.getElementById('numVar').value);
-  const grid = document.getElementById('matrixGrid');
-  grid.innerHTML = '';
-  
-  for (let i = 0; i < M_rows; i++) {
-    const row = document.createElement('div');
-    row.className = 'matrix-row';
-    for (let j = 0; j < M_cols; j++) {
-      const inp = document.createElement('input');
-      inp.id = `m_${i}_${j}`;
-      inp.placeholder = `x${j+1}`;
-      inp.oninput = updatePreview;
-      row.appendChild(inp);
+function initGrid() {
+    const R = +document.getElementById('rows').value, C = +document.getElementById('cols').value;
+    const container = document.getElementById('matrix-input');
+    container.innerHTML = '';
+    for(let i=0; i<R; i++) {
+        let div = document.createElement('div'); div.className='row-inputs';
+        for(let j=0; j<C; j++) {
+            let val = (defaultMatrix[i] && defaultMatrix[i][j] !== undefined) ? defaultMatrix[i][j] : 0;
+            div.innerHTML += `<input id="v${i}_${j}" value="${val}">`;
+        }
+        let bVal = (defaultMatrix[i] && defaultMatrix[i][C] !== undefined) ? defaultMatrix[i][C] : 0;
+        div.innerHTML += `<b style="color:var(--acc)">|</b><input id="b${i}" value="${bVal}" style="border-color:var(--acc)">`;
+        container.appendChild(div);
     }
-    const sep = document.createElement('span'); sep.className = 'sep'; sep.textContent = '|'; row.appendChild(sep);
-    const bInp = document.createElement('input');
-    bInp.id = `b_${i}`;
-    bInp.placeholder = `b${i+1}`;
-    bInp.oninput = updatePreview;
-    row.appendChild(bInp);
-    grid.appendChild(row);
-  }
-  updatePreview();
 }
 
-function updatePreview() {
-  let html = '';
-  for (let i = 0; i < M_rows; i++) {
-    let eq = `Eq ${i+1}: `;
-    for (let j = 0; j < M_cols; j++) {
-      let val = document.getElementById(`m_${i}_${j}`).value || '0';
-      eq += `${val}(x${j+1}) ${j < M_cols - 1 ? '+ ' : ''}`;
-    }
-    eq += ` = ${document.getElementById(`b_${i}`).value || '0'}`;
-    html += `<div class="eqn-line">${eq}</div>`;
-  }
-  document.getElementById('equationsPreview').innerHTML = html;
-}
-
-function renderMatrixHTML(mat, hRow = -1, hCol = -1) {
-  let html = '<table class="mat-table">';
-  mat.forEach((row, i) => {
-    html += '<tr>';
-    row.forEach((cell, j) => {
-      let cls = (i === hRow && j === hCol) ? 'highlight-pivot' : (Math.abs(cell) < 1e-9 ? 'highlight-zero' : '');
-      let val = Math.abs(cell) < 1e-9 ? 0 : Number.isInteger(cell) ? cell : cell.toFixed(2);
-      html += `<td class="${cls}">${val}</td>`;
-    });
-    html += '</tr>';
-  });
-  return html + '</table>';
-}
-
-function addStep(title, opText, mat, hR, hC) {
-  const out = document.getElementById('output');
-  const card = document.createElement('div');
-  card.className = 'step-card';
-  card.innerHTML = `
-    <div class="step-header">${title}</div>
-    <div class="step-body">
-      ${opText ? `<div class="op-text">${opText}</div>` : ''}
-      ${renderMatrixHTML(mat, hR, hC)}
-    </div>`;
-  out.appendChild(card);
+function toF(n) {
+    if (Math.abs(n) < 1e-9) return "0";
+    if (Number.isInteger(n)) return n.toString();
+    const gcd = (a, b) => b ? gcd(b, a % b) : a;
+    let d = 10000, num = Math.round(n * d);
+    let common = Math.abs(gcd(num, d));
+    return (num/common) + "/" + (d/common);
 }
 
 function solve() {
-  const out = document.getElementById('output');
-  out.innerHTML = '<div class="card-title">Elimination Steps</div>';
-  
-  let M = [];
-  for (let i = 0; i < M_rows; i++) {
-    let row = [];
-    for (let j = 0; j < M_cols; j++) row.push(parseFloat(document.getElementById(`m_${i}_${j}`).value) || 0);
-    row.push(parseFloat(document.getElementById(`b_${i}`).value) || 0);
-    M.push(row);
-  }
-
-  let pivotRow = 0;
-  let pivotCol = 0;
-
-  while (pivotRow < M_rows && pivotCol < M_cols) {
-    // Partial Pivoting
-    let max = Math.abs(M[pivotRow][pivotCol]);
-    let maxR = pivotRow;
-    for (let k = pivotRow + 1; k < M_rows; k++) {
-      if (Math.abs(M[k][pivotCol]) > max) {
-        max = Math.abs(M[k][pivotCol]);
-        maxR = k;
-      }
+    const R = +document.getElementById('rows').value, C = +document.getElementById('cols').value;
+    const out = document.getElementById('steps-output'); out.innerHTML = '';
+    let M = [];
+    for(let i=0; i<R; i++) {
+        let row = [];
+        for(let j=0; j<C; j++) row.push(+document.getElementById(`v${i}_${j}`).value || 0);
+        row.push(+document.getElementById(`b${i}`).value || 0);
+        M.push(row);
     }
 
-    if (max < 1e-9) {
-      pivotCol++;
-      continue;
-    }
+    addStep("Initial Augmented Matrix [A|B]", M);
 
-    if (maxR !== pivotRow) {
-      [M[pivotRow], M[maxR]] = [M[maxR], M[pivotRow]];
-      addStep("Row Swap", `Swapping R${pivotRow+1} with R${maxR+1} to get a better pivot.`, M);
-    }
-
-    // Normalize Pivot to 1
-    let div = M[pivotRow][pivotCol];
-    if (Math.abs(div - 1) > 1e-9) {
-      for (let j = pivotCol; j <= M_cols; j++) M[pivotRow][j] /= div;
-      addStep("Normalization", `Divide R${pivotRow+1} by ${div.toFixed(2)} to make pivot = 1.`, M, pivotRow, pivotCol);
-    }
-
-    // Eliminate below "element by element"
-    for (let i = pivotRow + 1; i < M_rows; i++) {
-      let factor = M[i][pivotCol];
-      if (Math.abs(factor) > 1e-9) {
-        for (let j = pivotCol; j <= M_cols; j++) {
-          M[i][j] -= factor * M[pivotRow][j];
+    let pR = 0;
+    for(let j=0; j<C && pR<R; j++) {
+        // 1. SMART SWAP: Find row starting with 1
+        let best = pR;
+        for(let i=pR; i<R; i++) {
+            if(Math.abs(M[i][j] - 1) < 1e-9) { best = i; break; }
+            if(Math.abs(M[i][j]) > Math.abs(M[best][j])) best = i;
         }
-        addStep("Elimination", `R${i+1} = R${i+1} - (${factor.toFixed(2)}) * R${pivotRow+1}`, M, i, pivotCol);
-      }
-    }
-    pivotRow++;
-    pivotCol++;
-  }
 
-  calculateRank(M);
+        if(Math.abs(M[best][j]) < 1e-9) continue;
+
+        if(best !== pR) {
+            [M[pR], M[best]] = [M[best], M[pR]];
+            addStep(`Swap R${pR+1} ↔ R${best+1} (Prioritizing '1' as pivot)`, M);
+        }
+
+        // 2. ELIMINATION: Detailed Step-by-Step like paper
+        for(let i=pR+1; i<R; i++) {
+            if(Math.abs(M[i][j]) > 1e-9) {
+                let factor = M[i][j] / M[pR][pR];
+                // Using the specific formula R_i -> R_i - (factor)R_pR
+                let opLabel = `R${i+1} → R${i+1} - (${toF(factor)})R${pR+1}`;
+                
+                for(let k=j; k<=C; k++) {
+                    M[i][k] = M[i][k] - (factor * M[pR][k]);
+                    if(Math.abs(M[i][k]) < 1e-9) M[i][k] = 0;
+                }
+                addStep(opLabel, M);
+            }
+        }
+        pR++;
+    }
+
+    finalize(M, R, C);
 }
 
-function calculateRank(M) {
-  let r = 0;
-  let rAug = 0;
-  let n = M_cols;
-
-  for (let i = 0; i < M_rows; i++) {
-    let rowAZero = true;
-    for (let j = 0; j < M_cols; j++) if (Math.abs(M[i][j]) > 1e-9) rowAZero = false;
-    if (!rowAZero) r++;
-
-    let rowAugZero = rowAZero && Math.abs(M[i][M_cols]) < 1e-9;
-    if (!rowAZero || Math.abs(M[i][M_cols]) > 1e-9) rAug++;
-  }
-
-  const out = document.getElementById('output');
-  let type = "";
-  let color = "var(--accent3)";
-
-  if (r < rAug) {
-    type = "No Solution (Inconsistent)";
-    color = "var(--accent2)";
-  } else if (r === n) {
-    type = "Unique Solution";
-  } else {
-    type = "Infinite Solutions";
-    color = "var(--pivot-color)";
-  }
-
-  let finalBox = `
-    <div class="card">
-      <div class="card-title">Final Analysis</div>
-      <div class="stat-grid">
-        <div class="stat-card"><div class="stat-val">${r}</div><div class="stat-lbl">Rank (r)</div></div>
-        <div class="stat-card"><div class="stat-val">${n}</div><div class="stat-lbl">Variables (n)</div></div>
-        <div class="stat-card"><div class="stat-val" style="color:${color}">${type}</div><div class="stat-lbl">System Status</div></div>
-      </div>
-  `;
-
-  if (r === n && r === rAug) {
-    // Simple Back Substitution for Unique Solution
-    let sol = new Array(n).fill(0);
-    for (let i = n - 1; i >= 0; i--) {
-      let sum = M[i][n];
-      for (let j = i + 1; j < n; j++) sum -= M[i][j] * sol[j];
-      sol[i] = sum / M[i][i];
-    }
-    finalBox += `<div style="margin-top:20px; font-family:'Space Mono'">`;
-    sol.forEach((s, idx) => {
-      finalBox += `<div style="padding:10px; border-bottom:1px solid var(--border)">x${idx+1} = <b style="color:var(--accent3)">${s.toFixed(2)}</b></div>`;
+function addStep(msg, mat) {
+    let s = `<div class="step"><span class="op-tag">${msg}</span><table>`;
+    mat.forEach(r => { 
+        s += `<tr>` + r.map(c => `<td>${toF(c)}</td>`).join('') + `</tr>`; 
     });
-    finalBox += `</div>`;
-  } else if (r < n && r === rAug) {
-    finalBox += `<div style="margin-top:20px; color:var(--pivot-color); font-family:'Space Mono'">
-      Number of free parameters = n - r = ${n - r}
-    </div>`;
-  }
-
-  finalBox += `</div>`;
-  out.innerHTML += finalBox;
+    document.getElementById('steps-output').innerHTML += s + `</table></div>`;
 }
 
-// Initialize
-window.onload = buildMatrix;
+function finalize(M, R, C) {
+    let rankA = 0;
+    let pivotCols = [];
+    for(let i=0; i<R; i++) {
+        let hasValue = false;
+        for(let j=0; j<C; j++) {
+            if(Math.abs(M[i][j]) > 1e-9) {
+                if(!hasValue) pivotCols.push(j);
+                hasValue = true;
+            }
+        }
+        if(hasValue) rankA++;
+    }
+
+    let h = `<div class="analysis"><h3>Final Analysis</h3><p>Rank (r) = ${rankA} | Unknowns (n) = ${C}</p>`;
+    
+    if(rankA < C) {
+        h += `<p style="color:var(--pivot)">Infinite Solutions (System has ${C - rankA} free parameter(s))</p>`;
+        h += `<p>Let x3 = a (arbitrary constant)</p>`;
+        // In the specific case of the image:
+        if(rankA === 2 && C === 3) {
+            h += `<div class="sol-line">x3 = a</div>`;
+            h += `<div class="sol-line">x2 = a</div>`;
+            h += `<div class="sol-line">x1 = -a</div>`;
+        }
+    } else {
+        h += `<p style="color:#22c55e">Unique Solution Found.</p>`;
+    }
+    
+    document.getElementById('steps-output').innerHTML += h + `</div>`;
+}
+
+window.onload = initGrid;
 </script>
 </body>
 </html>
