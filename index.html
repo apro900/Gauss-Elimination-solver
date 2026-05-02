@@ -1,1 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gauss Elimination Solver</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a40;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --accent3: #43e97b;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --pivot-color: #ffd166;
+    --op-color: #06d6a0;
+    --swap-color: #ef476f;
+  }
 
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    animation: drift 8s ease-in-out infinite;
+  }
+  .orb1 { width: 400px; height: 400px; background: rgba(108,99,255,0.12); top: -100px; right: -100px; }
+  .orb2 { width: 300px; height: 300px; background: rgba(255,101,132,0.08); bottom: 10%; left: -80px; animation-delay: -4s; }
+  @keyframes drift {
+    0%,100% { transform: translate(0,0); }
+    50% { transform: translate(20px, -20px); }
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* Header */
+  .hero {
+    text-align: center;
+    padding: 60px 0 50px;
+  }
+  .hero-tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    border: 1px solid rgba(108,99,255,0.4);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #fff 0%, #a89bff 50%, #ff6584 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 14px;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 1rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(108,99,255,0.6), transparent);
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Size selector */
+  .size-row {
+    display: flex;
+    gap: 16px;
+    align-items: end;
+    flex-wrap: wrap;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-width: 120px;
+  }
+  .field label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 1px;
+  }
+  .field input[type=number], .field select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    padding: 12px 16px;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+  .field input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .field input[type=number]:focus, .field select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108,99,255,0.15);
+  }
+
+  /* Matrix grid */
+  .matrix-grid {
+    display: grid;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .matrix-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .row-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    width: 28px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .matrix-row input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    padding: 10px;
+    border-radius: 8px;
+    outline: none;
+    text-align: center;
+    flex: 1;
+    min-width: 0;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    -moz-appearance: textfield;
+  }
+  .matrix-row input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .matrix-row input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108,99,255,0.12);
+    background: rgba(108,99,255,0.05);
+  }
+  .sep {
+    font-family: 'Space Mono', monospace;
+    color: var(--border);
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+  .b-input {
+    background: rgba(108,99,255,0.08) !important;
+    border-color: rgba(108,99,255,0.3) !important;
+  }
+  .b-input:focus {
+    background: rgba(108,99,255,0.15) !important;
+  }
+
+  /* Column labels */
+  .col-labels {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    padding-left: 36px;
+  }
+  .col-label {
+    flex: 1;
+    min-width: 0;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .col-label-sep { width: 16px; flex-shrink: 0; }
+  .col-label-b { flex: 1; min-width: 0; color: var(--accent); font-size: 0.7rem; text-align: center; font-family: 'Space Mono', monospace; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    padding: 13px 28px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #9b8cff);
+    color: #fff;
+    flex: 1;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(108,99,255,0.4);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { color: var(--text); border-color: var(--accent); }
+
+  /* Steps output */
+  #output { display: none; }
+
+  .step-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .step-header {
+    padding: 14px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .step-header.pivot  { background: rgba(255,209,102,0.08); color: var(--pivot-color); border-bottom: 1px solid rgba(255,209,102,0.15); }
+  .step-header.op     { background: rgba(6,214,160,0.08);   color: var(--op-color);    border-bottom: 1px solid rgba(6,214,160,0.15); }
+  .step-header.swap   { background: rgba(239,71,111,0.08);  color: var(--swap-color);  border-bottom: 1px solid rgba(239,71,111,0.15); }
+  .step-header.info   { background: rgba(108,99,255,0.08);  color: var(--accent);      border-bottom: 1px solid rgba(108,99,255,0.15); }
+  .step-header.result { background: rgba(67,233,123,0.08);  color: var(--accent3);     border-bottom: 1px solid rgba(67,233,123,0.15); }
+  .step-header.error  { background: rgba(255,101,132,0.08); color: var(--accent2);     border-bottom: 1px solid rgba(255,101,132,0.15); }
+
+  .step-body { padding: 20px; }
+
+  .step-op {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text);
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-radius: 8px;
+    border-left: 3px solid var(--accent);
+  }
+
+  /* Matrix display */
+  .mat-display {
+    overflow-x: auto;
+  }
+  .mat-table {
+    border-collapse: collapse;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    margin: 0 auto;
+  }
+  .mat-table th {
+    padding: 6px 14px;
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+  }
+  .mat-table td {
+    padding: 8px 14px;
+    text-align: center;
+    color: var(--text);
+    border: 1px solid var(--border);
+    min-width: 52px;
+    transition: background 0.3s;
+  }
+  .mat-table tr td:last-child {
+    border-left: 2px solid var(--accent);
+    color: var(--accent);
+  }
+  .mat-table .row-lbl {
+    color: var(--muted);
+    font-size: 0.7rem;
+    border: none;
+    background: transparent;
+    padding-right: 8px;
+  }
+  .mat-table td.highlight-pivot { background: rgba(255,209,102,0.12); color: var(--pivot-color); }
+  .mat-table td.highlight-result { background: rgba(67,233,123,0.1); color: var(--accent3); }
+
+  /* Result box */
+  .result-box {
+    background: var(--surface2);
+    border: 1px solid rgba(67,233,123,0.3);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    margin-top: 12px;
+  }
+  .result-box .sol-line {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.05rem;
+    color: var(--accent3);
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .result-box .sol-line:last-child { border-bottom: none; }
+
+  .inf-box {
+    border-color: rgba(255,209,102,0.3);
+  }
+  .inf-box .sol-line { color: var(--pivot-color); }
+  .inf-box .free-line { color: var(--muted); }
+
+  .err-box {
+    border-color: rgba(255,101,132,0.3);
+    background: rgba(255,101,132,0.05);
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .badge-ok { background: rgba(67,233,123,0.15); color: var(--accent3); }
+  .badge-inf { background: rgba(255,209,102,0.15); color: var(--pivot-color); }
+  .badge-err { background: rgba(255,101,132,0.15); color: var(--accent2); }
+
+  /* Rank info */
+  .rank-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .stat-box {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: center;
+  }
+  .stat-box .val {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .stat-box .lbl {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  /* Collapsible steps */
+  details { margin-bottom: 8px; }
+  details summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 12px 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s, border-color 0.2s;
+    user-select: none;
+  }
+  details summary::-webkit-details-marker { display: none; }
+  details summary:hover { color: var(--text); border-color: var(--accent); }
+  details[open] summary { color: var(--text); border-color: var(--accent); border-radius: 10px 10px 0 0; margin-bottom: 0; }
+  .chevron { margin-left: auto; transition: transform 0.2s; }
+  details[open] .chevron { transform: rotate(90deg); }
+
+  details .inner {
+    border: 1px solid var(--accent);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 20px;
+    background: var(--surface);
+  }
+
+  /* Rank comparison box */
+  .compare-box {
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    border: 1px solid;
+  }
+  .compare-rule {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    margin-bottom: 8px;
+  }
+  .compare-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .compare-detail {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.74rem;
+    color: var(--muted);
+    line-height: 1.6;
+    padding-left: 28px;
+  }
+  .ok-compare  { background: rgba(67,233,123,0.06);  border-color: rgba(67,233,123,0.25);  color: var(--accent3); }
+  .inf-compare { background: rgba(255,209,102,0.06); border-color: rgba(255,209,102,0.25); color: var(--pivot-color); }
+  .err-compare { background: rgba(255,101,132,0.06); border-color: rgba(255,101,132,0.25); color: var(--accent2); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .card { padding: 20px 16px; }
+    .size-row { flex-direction: column; }
+    .mat-table td, .mat-table th { padding: 6px 8px; min-width: 38px; font-size: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-tag">Linear Algebra</div>
+    <h1>Gauss Elimination<br>Solver</h1>
+    <p>// Step-by-step row reduction engine</p>
+  </div>
+
+  <!-- Setup -->
+  <div class="card" id="setupCard">
+    <div class="card-title">01 — System Size</div>
+    <div class="size-row">
+      <div class="field">
+        <label>Equations (m)</label>
+        <input type="number" id="numEq" min="1" max="8" value="3" placeholder="3">
+      </div>
+      <div class="field">
+        <label>Unknowns (n)</label>
+        <input type="number" id="numVar" min="1" max="8" value="3" placeholder="3">
+      </div>
+      <button class="btn btn-secondary" style="padding:13px 20px; flex-shrink:0" onclick="buildMatrix()">Build →</button>
+    </div>
+  </div>
+
+  <!-- Matrix Input -->
+  <div class="card" id="matrixCard" style="display:none">
+    <div class="card-title">02 — Augmented Matrix  [A | b]</div>
+    <div id="colLabels" class="col-labels"></div>
+    <div id="matrixGrid" class="matrix-grid"></div>
+    <div style="margin-top:24px">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="solve()">▶ Solve</button>
+        <button class="btn btn-secondary" onclick="fillExample()">Example</button>
+        <button class="btn btn-secondary" onclick="clearMatrix()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div id="output"></div>
+
+</div>
+
+<script>
+const EPS = 1e-9;
+
+function fmt(v) {
+  if (Math.abs(v) < EPS) return '0';
+  const rounded = Math.round(v * 1e9) / 1e9;
+  if (Math.abs(rounded - Math.round(rounded)) < EPS) return String(Math.round(rounded));
+  const s = rounded.toFixed(4).replace(/\.?0+$/, '');
+  return s;
+}
+
+let M_rows = 3, M_cols = 3;
+
+function buildMatrix(keepValues) {
+  const m = parseInt(document.getElementById('numEq').value) || 3;
+  const n = parseInt(document.getElementById('numVar').value) || 3;
+  M_rows = Math.max(1, Math.min(8, m));
+  M_cols = Math.max(1, Math.min(8, n));
+
+  // Col labels
+  const cl = document.getElementById('colLabels');
+  cl.innerHTML = '';
+  const spacer = document.createElement('div'); spacer.style.width='36px'; spacer.style.flexShrink=0; cl.appendChild(spacer);
+  for (let j = 0; j < M_cols; j++) {
+    const d = document.createElement('div'); d.className = 'col-label'; d.textContent = 'x'+(j+1); cl.appendChild(d);
+  }
+  const sp2 = document.createElement('div'); sp2.className='col-label-sep'; cl.appendChild(sp2);
+  const bd = document.createElement('div'); bd.className='col-label-b'; bd.textContent='b'; cl.appendChild(bd);
+
+  // Grid
+  const grid = document.getElementById('matrixGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < M_rows; i++) {
+    const row = document.createElement('div');
+    row.className = 'matrix-row';
+    const lbl = document.createElement('div');
+    lbl.className = 'row-label';
+    lbl.textContent = 'R'+(i+1);
+    row.appendChild(lbl);
+    for (let j = 0; j < M_cols; j++) {
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.id = `m_${i}_${j}`;
+      inp.placeholder = '0';
+      inp.step = 'any';
+      inp.addEventListener('keydown', e => { if (e.key==='Enter') { const ni = document.getElementById(`m_${i}_${j+1}`) || document.getElementById(`m_${i+1}_0`) || document.getElementById(`b_${i}`); if(ni) ni.focus(); } });
+      row.appendChild(inp);
+    }
+    const sep = document.createElement('div'); sep.className='sep'; sep.textContent='|'; row.appendChild(sep);
+    const binp = document.createElement('input');
+    binp.type = 'number';
+    binp.id = `b_${i}`;
+    binp.className = 'b-input';
+    binp.placeholder = '0';
+    binp.step = 'any';
+    binp.addEventListener('keydown', e => { if (e.key==='Enter') { const ni = document.getElementById(`m_${i+1}_0`); if(ni) ni.focus(); else solve(); } });
+    row.appendChild(binp);
+    grid.appendChild(row);
+  }
+
+  document.getElementById('matrixCard').style.display = 'block';
+  document.getElementById('output').style.display = 'none';
+  document.getElementById('output').innerHTML = '';
+}
+
+function getMatrix() {
+  const mat = [];
+  for (let i = 0; i < M_rows; i++) {
+    const row = [];
+    for (let j = 0; j < M_cols; j++) {
+      row.push(parseFloat(document.getElementById(`m_${i}_${j}`).value) || 0);
+    }
+    row.push(parseFloat(document.getElementById(`b_${i}`).value) || 0);
+    mat.push(row);
+  }
+  return mat;
+}
+
+function fillExample() {
+  document.getElementById('numEq').value = 3;
+  document.getElementById('numVar').value = 3;
+  buildMatrix();
+  const ex = [[1,1,1,6],[2,1,-1,1],[1,-1,2,5]];
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) document.getElementById(`m_${i}_${j}`).value = ex[i][j];
+    document.getElementById(`b_${i}`).value = ex[i][3];
+  }
+}
+
+function clearMatrix() {
+  for (let i = 0; i < M_rows; i++) {
+    for (let j = 0; j < M_cols; j++) document.getElementById(`m_${i}_${j}`).value = '';
+    document.getElementById(`b_${i}`).value = '';
+  }
+}
+
+// ─── Matrix HTML ───
+function matrixHTML(M, rows, n, pivotRow, pivotCol) {
+  let h = '<div class="mat-display"><table class="mat-table"><thead><tr><th></th>';
+  for (let j = 0; j < n; j++) h += `<th>x${j+1}</th>`;
+  h += '<th>b</th></tr></thead><tbody>';
+  for (let i = 0; i < rows; i++) {
+    h += `<tr><td class="row-lbl">R${i+1}</td>`;
+    for (let j = 0; j <= n; j++) {
+      let cls = '';
+      if (i === pivotRow && j === pivotCol) cls = ' class="highlight-pivot"';
+      else if (Math.abs(M[i][j]) < EPS && j < n) cls = ' style="color:var(--muted)"';
+      h += `<td${cls}>${fmt(M[i][j])}</td>`;
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+  return h;
+}
+
+// ─── Main Solver ───
+function solve() {
+  const origMat = getMatrix();
+  const m = M_rows, n = M_cols;
+  const out = document.getElementById('output');
+  out.innerHTML = '';
+  out.style.display = 'block';
+
+  let steps = [];
+  let M = origMat.map(r => [...r]);
+
+  // Helper: add step
+  function addStep(type, label, opText, mat, pivRow, pivCol) {
+    steps.push({ type, label, opText, mat: mat ? mat.map(r=>[...r]) : null, pivRow, pivCol });
+  }
+
+  addStep('info', 'Initial Matrix', null, M, -1, -1);
+
+  let pivot = 0;
+  for (let col = 0; col < n && pivot < m; col++) {
+    let best = pivot;
+    for (let i = pivot+1; i < m; i++)
+      if (Math.abs(M[i][col]) > Math.abs(M[best][col])) best = i;
+
+    if (Math.abs(M[best][col]) < EPS) continue;
+
+    if (best !== pivot) {
+      [M[pivot], M[best]] = [M[best], M[pivot]];
+      addStep('swap', `Swap R${pivot+1} ↔ R${best+1}`, `R${pivot+1} ↔ R${best+1}`, M, pivot, col);
+    }
+
+    addStep('pivot', `Pivot: Column x${col+1}  (Row R${pivot+1})`, `Using R${pivot+1} as pivot row for column x${col+1}`, M, pivot, col);
+
+    let anyOp = false;
+    for (let i = pivot+1; i < m; i++) {
+      if (Math.abs(M[i][col]) < EPS) continue;
+      const f = M[i][col] / M[pivot][col];
+      const opStr = f > 0
+        ? `R${i+1} = R${i+1} − (${fmt(f)}) × R${pivot+1}`
+        : `R${i+1} = R${i+1} + (${fmt(-f)}) × R${pivot+1}`;
+      for (let j = col; j <= n; j++) {
+        M[i][j] -= f * M[pivot][j];
+        if (Math.abs(M[i][j]) < EPS) M[i][j] = 0;
+      }
+      addStep('op', opStr, opStr, M, i, col);
+      anyOp = true;
+    }
+
+    pivot++;
+  }
+
+  // Rank / solution type
+  let rank = 0;
+  let noSol = false;
+  for (let i = 0; i < m; i++) {
+    let zero = true;
+    for (let j = 0; j < n; j++) if (Math.abs(M[i][j]) > EPS) { zero = false; break; }
+    if (zero && Math.abs(M[i][n]) > EPS) noSol = true;
+    else if (!zero) rank++;
+  }
+
+  // ─── Render steps ───
+  let delay = 0;
+  steps.forEach((s, idx) => {
+    const div = document.createElement('div');
+    div.className = 'step-card';
+    div.style.animationDelay = (delay * 0.06) + 's';
+    delay++;
+
+    let headerClass = s.type;
+    let icon = s.type === 'pivot' ? '◆' : s.type === 'op' ? '→' : s.type === 'swap' ? '⇅' : s.type === 'result' ? '✓' : '·';
+
+    div.innerHTML = `
+      <div class="step-header ${headerClass}">
+        <span>${icon}</span>
+        <span>${s.label}</span>
+      </div>
+      <div class="step-body">
+        ${s.opText && s.type !== 'info' ? `<div class="step-op">${s.opText}</div>` : ''}
+        ${s.mat ? matrixHTML(s.mat, m, n, s.pivRow, s.pivCol) : ''}
+      </div>`;
+    out.appendChild(div);
+  });
+
+  // ─── Result Analysis ───
+  const resCard = document.createElement('div');
+  resCard.className = 'step-card';
+  resCard.style.animationDelay = (delay * 0.06) + 's';
+  delay++;
+
+  if (noSol) {
+    let contradictions = '';
+    for (let i = 0; i < m; i++) {
+      let zero = true;
+      for (let j = 0; j < n; j++) if (Math.abs(M[i][j]) > EPS) { zero = false; break; }
+      if (zero && Math.abs(M[i][n]) > EPS)
+        contradictions += `<div class="sol-line">Row R${i+1}: 0 = ${fmt(M[i][n])} — Contradiction!</div>`;
+    }
+    resCard.innerHTML = `
+      <div class="step-header error">✗ No Solution — Inconsistent System</div>
+      <div class="step-body">
+        <div class="rank-row">
+          <div class="stat-box"><div class="val" style="color:var(--accent2)">${rank}</div><div class="lbl">r  (Rank)</div></div>
+          <div class="stat-box" style="display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:1.2rem;color:var(--accent2)">≠</div>
+          <div class="stat-box"><div class="val">${n}</div><div class="lbl">n  (Unknowns)</div></div>
+        </div>
+        <div class="compare-box err-compare">
+          <div class="compare-rule">
+            <span class="compare-icon">⚠</span>
+            <span>A row appeared where <strong>all coefficients = 0</strong> but <strong>b ≠ 0</strong></span>
+          </div>
+          <div class="compare-detail">This means the system is <strong>inconsistent</strong> — one equation contradicts the others, regardless of r vs n.</div>
+        </div>
+        <div class="result-box err-box">
+          <div class="badge badge-err">No Solution</div>
+          ${contradictions}
+        </div>
+      </div>`;
+
+  } else if (rank < n) {
+    // Infinite solutions
+    let basic = new Array(n).fill(false);
+    let bv = [], fv = [];
+    for (let i = 0; i < rank; i++)
+      for (let j = 0; j < n; j++)
+        if (Math.abs(M[i][j]) > EPS) { basic[j] = true; bv.push(j); break; }
+    for (let j = 0; j < n; j++) if (!basic[j]) fv.push(j);
+
+    let solLines = '';
+    for (let i = 0; i < rank; i++) {
+      const b = bv[i];
+      let expr = fmt(M[i][n] / M[i][b]);
+      for (const f of fv) {
+        if (Math.abs(M[i][f]) < EPS) continue;
+        const c = -M[i][f] / M[i][b];
+        if (c > 0) expr += ` + ${fmt(c)}·x${f+1}`;
+        else       expr += ` − ${fmt(-c)}·x${f+1}`;
+      }
+      solLines += `<div class="sol-line">x${b+1} = ${expr}</div>`;
+    }
+    for (const f of fv) solLines += `<div class="sol-line free-line">x${f+1} = free parameter</div>`;
+
+    resCard.innerHTML = `
+      <div class="step-header result">∞ Infinite Solutions</div>
+      <div class="step-body">
+        <div class="rank-row">
+          <div class="stat-box"><div class="val" style="color:var(--pivot-color)">${rank}</div><div class="lbl">r  (Rank)</div></div>
+          <div class="stat-box" style="display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:1.2rem;color:var(--pivot-color)">&lt;</div>
+          <div class="stat-box"><div class="val">${n}</div><div class="lbl">n  (Unknowns)</div></div>
+          <div class="stat-box"><div class="val" style="color:var(--accent2)">${n-rank}</div><div class="lbl">Free Vars</div></div>
+        </div>
+        <div class="compare-box inf-compare">
+          <div class="compare-rule">
+            <span class="compare-icon" style="color:var(--pivot-color)">∞</span>
+            <span>Since <strong>r = ${rank}</strong> &lt; <strong>n = ${n}</strong>  →  <strong>${n-rank}</strong> free variable${n-rank>1?'s':''}</span>
+          </div>
+          <div class="compare-detail">The rank is less than the number of unknowns, so some variables are <strong>free</strong> — you can assign them any value, giving infinite solutions.</div>
+        </div>
+        <div class="result-box inf-box">
+          <div class="badge badge-inf">Infinite Solutions</div>
+          <div style="font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:14px;letter-spacing:1px">GENERAL SOLUTION</div>
+          ${solLines}
+        </div>
+      </div>`;
+
+  } else {
+    // Unique solution — back substitution
+    const sol = new Array(n).fill(0);
+    let backSteps = [];
+
+    for (let i = rank-1; i >= 0; i--) {
+      let pc = -1;
+      for (let j = 0; j < n; j++) if (Math.abs(M[i][j]) > EPS) { pc = j; break; }
+      if (pc === -1) continue;
+      let rhs = M[i][n];
+      for (let j = pc+1; j < n; j++) if (Math.abs(M[i][j]) > EPS) rhs -= M[i][j] * sol[j];
+      sol[pc] = rhs / M[i][pc];
+      const _div = M[i][pc];
+      const _rhsF = fmt(rhs);
+      const _divF = fmt(_div);
+      const _solF = fmt(sol[pc]);
+      const _stepStr = (Math.abs(_div - 1) < EPS)
+        ? `x${pc+1} = ${_rhsF} = <strong style="color:var(--accent3)">${_solF}</strong>`
+        : `x${pc+1} = ${_rhsF} / ${_divF} = <strong style="color:var(--accent3)">${_solF}</strong>`;
+      backSteps.push(_stepStr);
+    }
+
+    let solLines = '';
+    for (let i = 0; i < n; i++)
+      solLines += `<div class="sol-line">x${i+1} = <strong>${fmt(sol[i])}</strong></div>`;
+
+    let backHTML = backSteps.map(s => `<div style="font-family:'Space Mono',monospace;font-size:0.82rem;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text)">${s}</div>`).join('');
+
+    resCard.innerHTML = `
+      <div class="step-header result">✓ Unique Solution</div>
+      <div class="step-body">
+        <div class="rank-row">
+          <div class="stat-box"><div class="val" style="color:var(--accent3)">${rank}</div><div class="lbl">r  (Rank)</div></div>
+          <div class="stat-box" style="display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:1.2rem;color:var(--accent3)">=</div>
+          <div class="stat-box"><div class="val">${n}</div><div class="lbl">n  (Unknowns)</div></div>
+        </div>
+        <div class="compare-box ok-compare">
+          <div class="compare-rule">
+            <span class="compare-icon" style="color:var(--accent3)">✓</span>
+            <span>Since <strong>r = ${rank}</strong> = <strong>n = ${n}</strong>  →  Unique Solution</span>
+          </div>
+          <div class="compare-detail">The rank equals the number of unknowns — every variable has exactly <strong>one</strong> determined value.</div>
+        </div>
+        <details open>
+          <summary><span>Back Substitution Steps</span><span class="chevron">›</span></summary>
+          <div class="inner">${backHTML}</div>
+        </details>
+        <div class="result-box" style="margin-top:16px">
+          <div class="badge badge-ok">Final Answer</div>
+          ${solLines}
+        </div>
+      </div>`;
+  }
+
+  out.appendChild(resCard);
+  resCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Init
+window.onload = () => { buildMatrix(); fillExample(); };
+</script>
+</body>
+</html>
