@@ -565,12 +565,31 @@
 <script>
 const EPS = 1e-9;
 
+function gcd(a, b) {
+  a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b));
+  while (b) { let t = b; b = a % b; a = t; }
+  return a;
+}
+
 function fmt(v) {
   if (Math.abs(v) < EPS) return '0';
-  const rounded = Math.round(v * 1e9) / 1e9;
-  if (Math.abs(rounded - Math.round(rounded)) < EPS) return String(Math.round(rounded));
-  const s = rounded.toFixed(4).replace(/\.?0+$/, '');
-  return s;
+  const r = Math.round(v * 1e9) / 1e9;
+  if (Math.abs(r - Math.round(r)) < 1e-6) return String(Math.round(r));
+  const sign = r < 0 ? -1 : 1;
+  const abs = Math.abs(r);
+  let bestNum = 0, bestDen = 1, bestErr = abs;
+  for (let den = 1; den <= 1000; den++) {
+    const num = Math.round(abs * den);
+    const err = Math.abs(abs - num / den);
+    if (err < 1e-7) { bestNum = num; bestDen = den; bestErr = err; break; }
+    if (err < bestErr) { bestNum = num; bestDen = den; bestErr = err; }
+  }
+  if (bestErr < 1e-6 && bestDen > 1) {
+    const g = gcd(bestNum, bestDen);
+    const n2 = bestNum / g, d = bestDen / g;
+    if (d <= 100) return (sign < 0 ? '-' : '') + (d === 1 ? String(n2) : n2 + '/' + d);
+  }
+  return r.toFixed(4).replace(/\.?0+$/, '');
 }
 
 let M_rows = 3, M_cols = 3;
