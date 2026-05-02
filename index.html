@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gauss Elimination Solver</title>
     <style>
-        /* الديزاين الأصلي 100% */
+        /* الديزاين الأصلي 100% بدون روابط خارجية */
         :root {
             --bg: #0a0a0f; --surface: #12121a; --border: #2a2a40;
             --accent: #6c63ff; --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
@@ -13,20 +13,20 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             background: var(--bg); color: var(--text); 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: sans-serif; /* خطوط النظام لسرعة الفتح */
             padding: 40px 20px; 
         }
         .container { max-width: 900px; margin: 0 auto; }
         
         h1 { 
-            text-align: center; font-size: 3rem; font-weight: 800; 
+            text-align: center; font-size: 2.5rem; font-weight: 800; 
             color: #6c63ff; margin-bottom: 30px; 
             text-transform: uppercase;
         }
         
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; margin-bottom: 25px; }
         .setup-row { display: flex; gap: 20px; justify-content: center; margin-bottom: 25px; }
-        label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 8px; text-transform: uppercase; }
+        label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 8px; text-transform: uppercase; font-weight: bold;}
 
         input.cell {
             background: #1a1a26; border: 1px solid var(--border); color: white;
@@ -38,11 +38,10 @@
         .aug-line { width: 2px; height: 35px; background: var(--accent); margin: 0 10px; opacity: 0.5; }
 
         .btn {
-            background: linear-gradient(135deg, var(--accent), #8a84ff); color: white; border: none;
+            background: #6c63ff; color: white; border: none;
             padding: 16px; border-radius: 12px; width: 100%; font-weight: 700; cursor: pointer; font-size: 1.1rem;
         }
 
-        /* Logic Styles (Arabic Content) */
         .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; padding: 15px; }
         .step-op { padding: 12px; direction: rtl; text-align: right; color: var(--text); border-right: 4px solid var(--accent); background: rgba(255,255,255,0.02); margin-bottom: 15px; }
         .mat-table { border-collapse: collapse; margin: 0 auto 10px; font-size: 0.9rem; }
@@ -68,6 +67,7 @@
 </div>
 
 <script>
+// مثال افتراضي 3x3
 const defaultVal = [[1, 2, 3, 6], [2, 4, 6, 12], [1, 1, 1, 3]];
 
 function init() {
@@ -134,9 +134,9 @@ function finalize(mat, m, n, out) {
         if(fA) rA++; if(fAB) rAB++;
     }
     let h = `<div class="analysis-panel"><h2>الاستنتاج النهائي:</h2><p>n = ${n} | r = ${rA} | Rank(A|B) = ${rAB}</p>`;
-    if(rA < rAB) h += `<p style="color:var(--accent2)">No Solution.</p>`;
-    else if(rA === n) h += `<p style="color:var(--accent3)">Unique Solution:</p>` + back(mat, rA, n, pivs);
-    else h += `<p style="color:var(--accent3)">Infinite Solutions. عدد الثوابت = ${n-rA}</p>` + inf(mat, rA, n, pivs);
+    if(rA < rAB) h += `<p style="color:#ff6584">نظام غير متسق: <b>No Solution</b>.</p>`;
+    else if(rA === n) h += `<p style="color:var(--accent3)">حل وحيد <b>Unique Solution</b>:</p>` + back(mat, rA, n, pivs);
+    else h += `<p style="color:var(--accent3)">حلول لانهائية. عدد الثوابت (n-r) = <b>${n-rA}</b></p>` + inf(mat, rA, n, pivs);
     out.innerHTML += h + '</div>';
 }
 
@@ -153,9 +153,9 @@ function back(mat, r, n, pivs) {
 
 function inf(mat, r, n, pivs) {
     let free = []; for(let j=0; j<n; j++) if(!pivs.includes(j)) free.push(j);
-    let sym = ['s','t','k'], m = {}, h = "<b>1. فرض المتغيرات الحرة:</b>";
+    let sym = ['s','t','k'], m = {}, h = "<b>1. فرض القيم:</b>";
     free.forEach((c, idx) => { m[c] = sym[idx%3]; h += `<div class="eqn-line">x${c+1} = ${m[c]}</div>`; });
-    h += "<br><b>2. المعادلات النهائية:</b>";
+    h += "<br><b>2. المعادلات:</b>";
     for(let i=r-1; i>=0; i--) {
         let p = pivs[i], rhs = `${mat[i][n]}`;
         for(let j=p+1; j<n; j++) {
