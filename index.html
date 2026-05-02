@@ -1,474 +1,237 @@
-1	<!DOCTYPE html>
-     2	<html lang="en">
-     3	<head>
-     4	<meta charset="UTF-8">
-     5	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-     6	<title>Gauss Elimination Solver</title>
-     7	<style>
-     8	:root {
-     9	  --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26;
-    10	  --border: #2a2a40; --accent: #6c63ff; --accent2: #ff6584;
-    11	  --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
-    12	  --yellow: #ffd166; --teal: #06d6a0;
-    13	}
-    14	* { margin:0; padding:0; box-sizing:border-box; }
-    15	body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; min-height:100vh; }
-    16	
-    17	body::before {
-    18	  content:''; position:fixed; inset:0;
-    19	  background-image: linear-gradient(rgba(108,99,255,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(108,99,255,0.03) 1px,transparent 1px);
-    20	  background-size:40px 40px; pointer-events:none; z-index:0;
-    21	}
-    22	.orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; }
-    23	.orb1 { width:500px; height:500px; background:rgba(108,99,255,0.1); top:-150px; right:-150px; }
-    24	.orb2 { width:400px; height:400px; background:rgba(255,101,132,0.07); bottom:0; left:-100px; }
-    25	
-    26	.wrap { position:relative; z-index:1; max-width:950px; margin:0 auto; padding:40px 20px 80px; }
-    27	
-    28	/* ── Header ── */
-    29	.hero { text-align:center; padding:50px 0 40px; }
-    30	.hero-badge { display:inline-block; font-size:10px; letter-spacing:3px; color:var(--accent); border:1px solid rgba(108,99,255,0.4); padding:5px 16px; border-radius:20px; margin-bottom:20px; text-transform:uppercase; }
-    31	.hero h1 { font-size:clamp(2rem,5vw,3.5rem); font-weight:900; letter-spacing:-1px; background:linear-gradient(135deg,#fff 0%,#a89bff 50%,#ff6584 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:10px; }
-    32	.hero p { color:var(--muted); font-size:0.85rem; letter-spacing:2px; }
-    33	
-    34	/* ── Card ── */
-    35	.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; margin-bottom:20px; position:relative; overflow:hidden; }
-    36	.card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(108,99,255,0.5),transparent); }
-    37	.card-label { font-size:10px; letter-spacing:3px; color:var(--accent); text-transform:uppercase; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
-    38	.card-label::after { content:''; flex:1; height:1px; background:var(--border); }
-    39	
-    40	/* ── Setup ── */
-    41	.setup-row { display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; }
-    42	.field { display:flex; flex-direction:column; gap:6px; flex:1; min-width:100px; }
-    43	.field label { font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
-    44	.field input[type=number] { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'Courier New',monospace; font-size:1.1rem; padding:11px 14px; border-radius:10px; outline:none; -moz-appearance:textfield; transition:border-color .2s,box-shadow .2s; }
-    45	.field input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; }
-    46	.field input[type=number]:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(108,99,255,0.15); }
-    47	
-    48	/* ── Equations Display ── */
-    49	.eq-display { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:20px; text-align:center; overflow-x:auto; }
-    50	.eq-line { font-size:clamp(0.85rem,2.5vw,1.05rem); color:var(--text); letter-spacing:1px; padding:6px 0; white-space:nowrap; }
-    51	.eq-line .sub { font-size:0.75em; color:var(--muted); }
-    52	.eq-hint { font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
-    53	
-    54	/* ── Matrix ── */
-    55	.matrix-wrap { overflow-x:auto; padding-bottom:4px; }
-    56	.col-heads { display:flex; gap:8px; padding-left:44px; margin-bottom:4px; min-width:max-content; }
-    57	.col-head { width:70px; text-align:center; font-size:10px; color:var(--muted); letter-spacing:1px; flex-shrink:0; }
-    58	.col-head.b-head { color:var(--accent); }
-    59	.col-head.sep-head { width:20px; flex-shrink:0; }
-    60	.mrow { display:flex; align-items:center; gap:8px; margin-bottom:8px; min-width:max-content; }
-    61	.row-lbl { width:36px; text-align:right; font-size:11px; color:var(--muted); flex-shrink:0; }
-    62	.cell { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'Courier New',monospace; font-size:0.95rem; padding:10px; border-radius:8px; width:70px; text-align:center; outline:none; flex-shrink:0; -moz-appearance:textfield; transition:border-color .2s,background .2s; }
-    63	.cell::-webkit-inner-spin-button { -webkit-appearance:none; }
-    64	.cell:focus { border-color:var(--accent); background:rgba(108,99,255,0.07); }
-    65	.cell.b-cell { background:rgba(108,99,255,0.08); border-color:rgba(108,99,255,0.3); }
-    66	.aug-sep { width:2px; height:36px; background:rgba(108,99,255,0.4); flex-shrink:0; margin:0 4px; }
-    67	
-    68	/* ── Buttons ── */
-    69	.btns { display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
-    70	.btn { padding:13px 24px; border-radius:10px; border:none; cursor:pointer; font-family:'Courier New',monospace; font-weight:700; font-size:0.9rem; letter-spacing:1px; transition:all .2s; }
-    71	.btn-solve { background:linear-gradient(135deg,var(--accent),#9b8cff); color:#fff; flex:1; }
-    72	.btn-solve:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(108,99,255,0.4); }
-    73	.btn-ex { background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
-    74	.btn-ex:hover { color:var(--text); border-color:var(--accent); }
-    75	.btn-clr { background:var(--surface2); color:var(--muted); border:1px solid var(--border); }
-    76	
-    77	/* ── Steps ── */
-    78	#output { display:none; }
-    79	.step { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; overflow:hidden; animation:fadeUp .35s ease both; }
-    80	@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-    81	
-    82	.step-head { padding:12px 18px; display:flex; align-items:center; gap:10px; font-size:11px; letter-spacing:2px; text-transform:uppercase; }
-    83	.step-head.initial { background:rgba(108,99,255,0.08); color:var(--accent); border-bottom:1px solid rgba(108,99,255,0.15); }
-    84	.step-head.swap    { background:rgba(239,71,111,0.08); color:#ef476f;      border-bottom:1px solid rgba(239,71,111,0.15); }
-    85	.step-head.scale   { background:rgba(255,209,102,0.08); color:var(--yellow); border-bottom:1px solid rgba(255,209,102,0.15); }
-    86	.step-head.elim    { background:rgba(6,214,160,0.08); color:var(--teal);   border-bottom:1px solid rgba(6,214,160,0.15); }
-    87	.step-head.pivot   { background:rgba(255,209,102,0.06); color:var(--yellow); border-bottom:1px solid rgba(255,209,102,0.1); }
-    88	.step-head.result  { background:rgba(67,233,123,0.08); color:var(--accent3); border-bottom:1px solid rgba(67,233,123,0.15); }
-    89	.step-head.nosol   { background:rgba(255,101,132,0.08); color:var(--accent2); border-bottom:1px solid rgba(255,101,132,0.15); }
-    90	.step-head.inf     { background:rgba(255,209,102,0.08); color:var(--yellow); border-bottom:1px solid rgba(255,209,102,0.15); }
-    91	
-    92	.step-body { padding:18px 20px; }
-    93	.op-box { font-size:0.9rem; color:var(--text); padding:10px 14px; background:rgba(255,255,255,0.03); border-left:3px solid var(--accent); border-radius:0 8px 8px 0; margin-bottom:14px; letter-spacing:.5px; }
-    94	.op-box.swap-op  { border-color:#ef476f; }
-    95	.op-box.scale-op { border-color:var(--yellow); }
-    96	.op-box.elim-op  { border-color:var(--teal); }
-    97	
-    98	/* ── Matrix Table ── */
-    99	.mat-wrap { overflow-x:auto; }
-   100	.mat { border-collapse:collapse; margin:0 auto; font-family:'Courier New',monospace; font-size:0.88rem; }
-   101	.mat th { padding:5px 14px; color:var(--muted); font-weight:400; font-size:10px; letter-spacing:1px; }
-   102	.mat td { padding:9px 16px; text-align:center; border:1px solid var(--border); min-width:60px; color:var(--text); }
-   103	.mat td.rl { color:var(--muted); font-size:10px; border:none; padding-right:8px; }
-   104	.mat td.bc { border-left:2px solid rgba(108,99,255,0.5); color:var(--accent); }
-   105	.mat td.pivot-cell { background:rgba(255,209,102,0.12); color:var(--yellow); font-weight:700; }
-   106	.mat td.zero { color:var(--border); }
-   107	
-   108	/* ── Analysis ── */
-   109	.analysis { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; overflow:hidden; animation:fadeUp .35s ease both; }
-   110	.rank-bars { display:flex; gap:12px; flex-wrap:wrap; padding:20px; }
-   111	.rb { flex:1; min-width:80px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center; }
-   112	.rb .v { font-size:2rem; font-weight:900; line-height:1; }
-   113	.rb .l { font-size:9px; color:var(--muted); letter-spacing:2px; margin-top:4px; text-transform:uppercase; }
-   114	.rb .sym { font-size:1.4rem; font-weight:700; display:flex; align-items:center; justify-content:center; height:100%; }
-   115	.compare-box { margin:0 20px 20px; padding:14px 18px; border-radius:10px; border:1px solid; }
-   116	.compare-box.ok  { background:rgba(67,233,123,0.05); border-color:rgba(67,233,123,0.25); color:var(--accent3); }
-   117	.compare-box.inf { background:rgba(255,209,102,0.05); border-color:rgba(255,209,102,0.25); color:var(--yellow); }
-   118	.compare-box.no  { background:rgba(255,101,132,0.05); border-color:rgba(255,101,132,0.25); color:var(--accent2); }
-   119	.compare-rule { font-size:0.88rem; margin-bottom:6px; }
-   120	.compare-note { font-size:0.75rem; color:var(--muted); line-height:1.6; }
-   121	
-   122	/* ── Solution ── */
-   123	.sol-section { padding:0 20px 20px; }
-   124	.sol-title { font-size:10px; letter-spacing:3px; color:var(--muted); text-transform:uppercase; margin-bottom:12px; padding-top:4px; }
-   125	.back-step { font-size:0.85rem; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text); }
-   126	.back-step:last-child { border-bottom:none; }
-   127	.final-box { background:var(--surface2); border:1px solid rgba(67,233,123,0.25); border-radius:10px; padding:20px; text-align:center; margin-top:14px; }
-   128	.final-box.inf-box { border-color:rgba(255,209,102,0.25); }
-   129	.sol-line { font-size:1rem; color:var(--accent3); padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
-   130	.sol-line:last-child { border-bottom:none; }
-   131	.sol-line.free { color:var(--muted); font-size:0.85rem; }
-   132	.badge { display:inline-block; padding:4px 14px; border-radius:20px; font-size:10px; letter-spacing:2px; margin-bottom:14px; text-transform:uppercase; }
-   133	.badge.ok  { background:rgba(67,233,123,0.12); color:var(--accent3); }
-   134	.badge.inf { background:rgba(255,209,102,0.12); color:var(--yellow); }
-   135	.badge.no  { background:rgba(255,101,132,0.12); color:var(--accent2); }
-   136	
-   137	::-webkit-scrollbar { width:5px; height:5px; }
-   138	::-webkit-scrollbar-track { background:var(--surface); }
-   139	::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
-   140	</style>
-   141	</head>
-   142	<body>
-   143	<div class="orb orb1"></div>
-   144	<div class="orb orb2"></div>
-   145	
-   146	<div class="wrap">
-   147	
-   148	<div class="hero">
-   149	  <div class="hero-badge">Linear Algebra</div>
-   150	  <h1>Gauss Elimination</h1>
-   151	  <p>// Academic Step-by-Step Solver</p>
-   152	</div>
-   153	
-   154	<div class="card">
-   155	  <div class="card-label">01 — System Size</div>
-   156	  <div class="setup-row">
-   157	    <div class="field"><label>Equations (m)</label><input type="number" id="numM" min="1" value="3"></div>
-   158	    <div class="field"><label>Unknowns (n)</label><input type="number" id="numN" min="1" value="3"></div>
-   159	    <button class="btn btn-ex" style="padding:11px 18px;flex-shrink:0" onclick="buildGrid()">Build →</button>
-   160	  </div>
-   161	</div>
-   162	
-   163	<div class="card" id="matCard" style="display:none">
-   164	  <div class="card-label">02 — Augmented Matrix [A | b]</div>
-   165	  
-   166	  <!-- Equations Display -->
-   167	  <div id="equationsBox" class="eq-display"></div>
-   168	  
-   169	  <div class="matrix-wrap">
-   170	    <div id="colHeads" class="col-heads"></div>
-   171	    <div id="matGrid"></div>
-   172	  </div>
-   173	  <div class="btns">
-   174	    <button class="btn btn-solve" onclick="solve()">▶ Solve</button>
-   175	    <button class="btn btn-ex" onclick="loadExample()">Example</button>
-   176	    <button class="btn btn-clr" onclick="clearGrid()">Clear</button>
-   177	  </div>
-   178	</div>
-   179	
-   180	<div id="output"></div>
-   181	
-   182	</div>
-   183	
-   184	<script>
-   185	const EPS = 1e-9;
-   186	let M=3, N=3;
-   187	
-   188	/* ── fmt ── */
-   189	function gcd(a,b){a=Math.abs(Math.round(a));b=Math.abs(Math.round(b));while(b){let t=b;b=a%b;a=t;}return a||1;}
-   190	function fmt(v){
-   191	  if(Math.abs(v)<EPS)return'0';
-   192	  const r=Math.round(v*1e9)/1e9;
-   193	  if(Math.abs(r-Math.round(r))<1e-6)return String(Math.round(r));
-   194	  const sign=r<0?-1:1, abs=Math.abs(r);
-   195	  let bN=0,bD=1,bE=Infinity;
-   196	  for(let d=1;d<=1000;d++){const n=Math.round(abs*d),e=Math.abs(abs-n/d);if(e<1e-7){bN=n;bD=d;bE=e;break;}if(e<bE){bN=n;bD=d;bE=e;}}
-   197	  if(bE<1e-6&&bD>1){const g=gcd(bN,bD),n2=bN/g,d2=bD/g;if(d2<=200)return(sign<0?'-':'')+( d2===1?String(n2):n2+'/'+d2);}
-   198	  return r.toFixed(3).replace(/\.?0+$/,'');
-   199	}
-   200	
-   201	/* subscript digits helper */
-   202	const SUB = ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉'];
-   203	function sub(n){
-   204	  if(n===0) return SUB[0];
-   205	  let s='', num=Math.abs(n);
-   206	  while(num>0){ s=SUB[num%10]+s; num=Math.floor(num/10); }
-   207	  return s;
-   208	}
-   209	
-   210	/* ── Build Grid ── */
-   211	function buildGrid(){
-   212	  M=Math.max(1,Math.floor(+document.getElementById('numM').value||3));
-   213	  N=Math.max(1,Math.floor(+document.getElementById('numN').value||3));
-   214	
-   215	  // equations display
-   216	  const eqBox=document.getElementById('equationsBox');
-   217	  let eqHTML='';
-   218	  for(let i=1;i<=M;i++){
-   219	    let terms=[];
-   220	    for(let j=1;j<=N;j++){
-   221	      terms.push(`a<sub class="sub">${i}${j}</sub>x<sub class="sub">${j}</sub>`);
-   222	    }
-   223	    eqHTML+=`<div class="eq-line">${terms.join(' + ')} = b<sub class="sub">${i}</sub></div>`;
-   224	  }
-   225	  eqHTML+=`<div class="eq-hint">Enter coefficients a<sub class="sub">ij</sub> and constants b<sub class="sub">i</sub> in the matrix below</div>`;
-   226	  eqBox.innerHTML=eqHTML;
-   227	
-   228	  // col headers
-   229	  const ch=document.getElementById('colHeads');
-   230	  ch.innerHTML='<div class="col-head" style="width:44px"></div>';
-   231	  for(let j=0;j<N;j++) ch.innerHTML+=`<div class="col-head">x${j+1}</div>`;
-   232	  ch.innerHTML+='<div class="col-head sep-head"></div>';
-   233	  ch.innerHTML+='<div class="col-head b-head">b</div>';
-   234	
-   235	  // rows
-   236	  const g=document.getElementById('matGrid');
-   237	  g.innerHTML='';
-   238	  for(let i=0;i<M;i++){
-   239	    const row=document.createElement('div'); row.className='mrow';
-   240	    row.innerHTML=`<div class="row-lbl">R${i+1}</div>`;
-   241	    for(let j=0;j<N;j++){
-   242	      const inp=document.createElement('input');
-   243	      inp.type='number'; inp.className='cell'; inp.id=`a_${i}_${j}`; inp.placeholder=`a${sub(i+1)}${sub(j+1)}`; inp.step='any';
-   244	      inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=document.getElementById(`a_${i}_${j+1}`)||document.getElementById(`b_${i}`);if(nx)nx.focus();}});
-   245	      row.appendChild(inp);
-   246	    }
-   247	    const sep=document.createElement('div'); sep.className='aug-sep'; row.appendChild(sep);
-   248	    const b=document.createElement('input');
-   249	    b.type='number'; b.className='cell b-cell'; b.id=`b_${i}`; b.placeholder=`b${sub(i+1)}`; b.step='any';
-   250	    b.addEventListener('keydown',e=>{if(e.key==='Enter'){const nx=document.getElementById(`a_${i+1}_0`);if(nx)nx.focus();else solve();}});
-   251	    row.appendChild(b);
-   252	    g.appendChild(row);
-   253	  }
-   254	  document.getElementById('matCard').style.display='block';
-   255	  document.getElementById('output').style.display='none';
-   256	  document.getElementById('output').innerHTML='';
-   257	}
-   258	
-   259	function getMatrix(){
-   260	  const mat=[];
-   261	  for(let i=0;i<M;i++){
-   262	    const row=[];
-   263	    for(let j=0;j<N;j++) row.push(parseFloat(document.getElementById(`a_${i}_${j}`).value)||0);
-   264	    row.push(parseFloat(document.getElementById(`b_${i}`).value)||0);
-   265	    mat.push(row);
-   266	  }
-   267	  return mat;
-   268	}
-   269	
-   270	function loadExample(){
-   271	  document.getElementById('numM').value=3;
-   272	  document.getElementById('numN').value=3;
-   273	  buildGrid();
-   274	  const ex=[[1,1,1,6],[2,1,-1,1],[1,-1,2,5]];
-   275	  for(let i=0;i<3;i++){for(let j=0;j<3;j++)document.getElementById(`a_${i}_${j}`).value=ex[i][j];document.getElementById(`b_${i}`).value=ex[i][3];}
-   276	}
-   277	
-   278	function clearGrid(){
-   279	  for(let i=0;i<M;i++){for(let j=0;j<N;j++)document.getElementById(`a_${i}_${j}`).value='';document.getElementById(`b_${i}`).value='';}
-   280	}
-   281	
-   282	/* ── Matrix HTML ── */
-   283	function matHTML(A, m, n, pivR=-1, pivC=-1){
-   284	  let h='<div class="mat-wrap"><table class="mat"><thead><tr><th></th>';
-   285	  for(let j=0;j<n;j++) h+=`<th>x${j+1}</th>`;
-   286	  h+='<th>b</th></tr></thead><tbody>';
-   287	  for(let i=0;i<m;i++){
-   288	    h+=`<tr><td class="rl">R${i+1}</td>`;
-   289	    for(let j=0;j<=n;j++){
-   290	      const val=A[i][j];
-   291	      let cls='';
-   292	      if(j===n) cls=' class="bc"';
-   293	      else if(i===pivR&&j===pivC) cls=' class="pivot-cell"';
-   294	      else if(Math.abs(val)<EPS) cls=' class="zero"';
-   295	      h+=`<td${cls}>${fmt(val)}</td>`;
-   296	    }
-   297	    h+='</tr>';
-   298	  }
-   299	  h+='</tbody></table></div>';
-   300	  return h;
-   301	}
-   302	
-   303	/* ── Step card ── */
-   304	function stepCard(type, title, opText, A, m, n, pivR=-1, pivC=-1, delay=0){
-   305	  const d=document.createElement('div');
-   306	  d.className='step'; d.style.animationDelay=(delay*0.05)+'s';
-   307	  const icon={initial:'·',swap:'⇅',scale:'÷',elim:'→',pivot:'◆',result:'✓',nosol:'✗',inf:'∞'}[type]||'·';
-   308	  d.innerHTML=`
-   309	    <div class="step-head ${type}"><span>${icon}</span><span>${title}</span></div>
-   310	    <div class="step-body">
-   311	      ${opText?`<div class="op-box ${type}-op">${opText}</div>`:''}
-   312	      ${A?matHTML(A,m,n,pivR,pivC):''}
-   313	    </div>`;
-   314	  return d;
-   315	}
-   316	
-   317	/* ── Main Solve ── */
-   318	function solve(){
-   319	  const orig=getMatrix();
-   320	  const m=M, n=N;
-   321	  const out=document.getElementById('output');
-   322	  out.innerHTML=''; out.style.display='block';
-   323	
-   324	  let A=orig.map(r=>[...r]);
-   325	  let delay=0;
-   326	
-   327	  // Initial
-   328	  out.appendChild(stepCard('initial','Initial Augmented Matrix [A | b]',null,A,m,n,-1,-1,delay++));
-   329	
-   330	  let pivRow=0;
-   331	  for(let col=0; col<n && pivRow<m; col++){
-   332	    // find best pivot
-   333	    let best=pivRow;
-   334	    for(let i=pivRow+1;i<m;i++) if(Math.abs(A[i][col])>Math.abs(A[best][col])) best=i;
-   335	    if(Math.abs(A[best][col])<EPS) continue;
-   336	
-   337	    // swap
-   338	    if(best!==pivRow){
-   339	      [A[pivRow],A[best]]=[A[best],A[pivRow]];
-   340	      out.appendChild(stepCard('swap',`Row Swap: R${pivRow+1} ↔ R${best+1}`,`R${pivRow+1} ↔ R${best+1}`,A,m,n,pivRow,col,delay++));
-   341	    }
-   342	
-   343	    // show pivot
-   344	    out.appendChild(stepCard('pivot',`Pivot Element: Row R${pivRow+1}, Column x${col+1}`,`Using R${pivRow+1} as pivot row to eliminate column x${col+1}`,A,m,n,pivRow,col,delay++));
-   345	
-   346	    // eliminate below
-   347	    for(let i=pivRow+1;i<m;i++){
-   348	      if(Math.abs(A[i][col])<EPS) continue;
-   349	      const f=A[i][col]/A[pivRow][col];
-   350	      const fStr=fmt(f);
-   351	      const opStr= f>0
-   352	        ? `R${i+1}  =  R${i+1}  −  (${fStr}) × R${pivRow+1}`
-   353	        : `R${i+1}  =  R${i+1}  +  (${fmt(-f)}) × R${pivRow+1}`;
-   354	      for(let j=col;j<=n;j++){A[i][j]-=f*A[pivRow][j];if(Math.abs(A[i][j])<EPS)A[i][j]=0;}
-   355	      out.appendChild(stepCard('elim','Elimination Step',opStr,A,m,n,i,col,delay++));
-   356	    }
-   357	    pivRow++;
-   358	  }
-   359	
-   360	  /* ── Rank ── */
-   361	  let rank=0, noSol=false;
-   362	  for(let i=0;i<m;i++){
-   363	    let zeroCoef=true;
-   364	    for(let j=0;j<n;j++) if(Math.abs(A[i][j])>EPS){zeroCoef=false;break;}
-   365	    if(zeroCoef&&Math.abs(A[i][n])>EPS) noSol=true;
-   366	    else if(!zeroCoef) rank++;
-   367	  }
-   368	
-   369	  /* ── Analysis card ── */
-   370	  const ac=document.createElement('div'); ac.className='analysis'; ac.style.animationDelay=(delay*0.05)+'s'; delay++;
-   371	
-   372	  if(noSol){
-   373	    let contra='';
-   374	    for(let i=0;i<m;i++){
-   375	      let zc=true; for(let j=0;j<n;j++) if(Math.abs(A[i][j])>EPS){zc=false;break;}
-   376	      if(zc&&Math.abs(A[i][n])>EPS) contra+=`<div class="back-step" style="color:var(--accent2)">Row R${i+1} :  0 = ${fmt(A[i][n])}  →  Contradiction!</div>`;
-   377	    }
-   378	    ac.innerHTML=`
-   379	      <div class="step-head nosol">✗ Result Analysis — No Solution</div>
-   380	      <div class="rank-bars">
-   381	        <div class="rb"><div class="v" style="color:var(--accent2)">${rank}</div><div class="l">r (Rank)</div></div>
-   382	        <div class="rb"><div class="sym" style="color:var(--accent2)">≠</div></div>
-   383	        <div class="rb"><div class="v">${n}</div><div class="l">n (Unknowns)</div></div>
-   384	      </div>
-   385	      <div class="compare-box no">
-   386	        <div class="compare-rule">⚠  A zero-row appeared with b ≠ 0  →  Inconsistent System</div>
-   387	        <div class="compare-note">One or more equations contradict each other. No values of x satisfy all equations simultaneously.</div>
-   388	      </div>
-   389	      <div class="sol-section">${contra}<div class="final-box" style="border-color:rgba(255,101,132,0.25);background:rgba(255,101,132,0.04)"><span class="badge no">No Solution</span><br><span style="color:var(--accent2);font-size:0.85rem">The system is inconsistent.</span></div></div>`;
-   390	
-   391	  } else if(rank<n){
-   392	    /* Infinite solutions */
-   393	    let basic=new Array(n).fill(false), bv=[], fv=[];
-   394	    for(let i=0;i<rank;i++) for(let j=0;j<n;j++) if(Math.abs(A[i][j])>EPS){basic[j]=true;bv.push(j);break;}
-   395	    for(let j=0;j<n;j++) if(!basic[j]) fv.push(j);
-   396	
-   397	    let solLines='';
-   398	    for(let i=0;i<rank;i++){
-   399	      const b=bv[i]; let expr=fmt(A[i][n]/A[i][b]);
-   400	      for(const f of fv){
-   401	        if(Math.abs(A[i][f])<EPS) continue;
-   402	        const c=-A[i][f]/A[i][b];
-   403	        expr+= c>0 ? ` + ${fmt(c)}·x${f+1}` : ` − ${fmt(-c)}·x${f+1}`;
-   404	      }
-   405	      solLines+=`<div class="sol-line">x${b+1}  =  ${expr}</div>`;
-   406	    }
-   407	    for(const f of fv) solLines+=`<div class="sol-line free">x${f+1}  =  free parameter (∈ ℝ)</div>`;
-   408	
-   409	    ac.innerHTML=`
-   410	      <div class="step-head inf">∞ Result Analysis — Infinite Solutions</div>
-   411	      <div class="rank-bars">
-   412	        <div class="rb"><div class="v" style="color:var(--yellow)">${rank}</div><div class="l">r (Rank A)</div></div>
-   413	        <div class="rb"><div class="sym" style="color:var(--yellow)">&lt;</div></div>
-   414	        <div class="rb"><div class="v">${n}</div><div class="l">n (Unknowns)</div></div>
-   415	        <div class="rb"><div class="v" style="color:var(--accent2)">${n-rank}</div><div class="l">Free Vars</div></div>
-   416	      </div>
-   417	      <div class="compare-box inf">
-   418	        <div class="compare-rule">∞  Since r = ${rank}  &lt;  n = ${n}  →  ${n-rank} free variable${n-rank>1?'s':''}</div>
-   419	        <div class="compare-note">The rank is less than the number of unknowns. Assign any real value to the free variable${n-rank>1?'s':''} — infinitely many solutions exist.</div>
-   420	      </div>
-   421	      <div class="sol-section">
-   422	        <div class="sol-title">General Solution</div>
-   423	        <div class="final-box inf-box"><span class="badge inf">Infinite Solutions</span>${solLines}</div>
-   424	      </div>`;
-   425	
-   426	  } else {
-   427	    /* Unique solution — back substitution */
-   428	    const sol=new Array(n).fill(0);
-   429	    const bsSteps=[];
-   430	
-   431	    for(let i=rank-1;i>=0;i--){
-   432	      let pc=-1; for(let j=0;j<n;j++) if(Math.abs(A[i][j])>EPS){pc=j;break;}
-   433	      if(pc===-1) continue;
-   434	      let rhs=A[i][n];
-   435	      let subs='';
-   436	      for(let j=pc+1;j<n;j++) if(Math.abs(A[i][j])>EPS){rhs-=A[i][j]*sol[j];subs+=`  [x${j+1}=${fmt(sol[j])}]`;}
-   437	      sol[pc]=rhs/A[i][pc];
-   438	      const eq= Math.abs(A[i][pc]-1)<EPS
-   439	        ? `x${pc+1}  =  ${fmt(rhs)}${subs}  =  <strong style="color:var(--accent3)">${fmt(sol[pc])}</strong>`
-   440	        : `x${pc+1}  =  ${fmt(rhs)} / ${fmt(A[i][pc])}${subs}  =  <strong style="color:var(--accent3)">${fmt(sol[pc])}</strong>`;
-   441	      bsSteps.push(eq);
-   442	    }
-   443	
-   444	    const bsHTML=bsSteps.map(s=>`<div class="back-step">${s}</div>`).join('');
-   445	    let solLines='';
-   446	    for(let i=0;i<n;i++) solLines+=`<div class="sol-line">x${i+1}  =  <strong>${fmt(sol[i])}</strong></div>`;
-   447	
-   448	    ac.innerHTML=`
-   449	      <div class="step-head result">✓ Result Analysis — Unique Solution</div>
-   450	      <div class="rank-bars">
-   451	        <div class="rb"><div class="v" style="color:var(--accent3)">${rank}</div><div class="l">r (Rank A)</div></div>
-   452	        <div class="rb"><div class="sym" style="color:var(--accent3)">=</div></div>
-   453	        <div class="rb"><div class="v">${n}</div><div class="l">n (Unknowns)</div></div>
-   454	      </div>
-   455	      <div class="compare-box ok">
-   456	        <div class="compare-rule">✓  Since r = ${rank}  =  n = ${n}  →  Unique Solution</div>
-   457	        <div class="compare-note">The rank equals the number of unknowns. Every variable has exactly one determined value.</div>
-   458	      </div>
-   459	      <div class="sol-section">
-   460	        <div class="sol-title">Back Substitution</div>
-   461	        ${bsHTML}
-   462	        <div class="final-box"><span class="badge ok">Final Answer</span>${solLines}</div>
-   463	      </div>`;
-   464	  }
-   465	
-   466	  out.appendChild(ac);
-   467	  ac.scrollIntoView({behavior:'smooth',block:'nearest'});
-   468	}
-   469	
-   470	window.onload=()=>{buildGrid();loadExample();};
-   471	</script>
-   472	</body>
-   473	</html>
-   474
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gauss Elimination Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  /* نفس الستايبل القديم مع تحسينات طفيفة للاتجاه العربي */
+  :root {
+    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26;
+    --border: #2a2a40; --accent: #6c63ff; --accent2: #ff6584;
+    --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
+    --pivot-color: #ffd166;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Syne', sans-serif; min-height: 100vh;
+    direction: rtl; text-align: right;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; z-index: 1; position: relative; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .matrix-grid { display: grid; gap: 10px; margin-top: 15px; direction: ltr; }
+  .matrix-row { display: flex; align-items: center; gap: 8px; }
+  .matrix-row input {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: 'Space Mono', monospace;
+    padding: 10px; border-radius: 8px; width: 60px; text-align: center;
+  }
+  .eqn-display { font-family: 'Space Mono', monospace; font-size: 0.9rem; color: var(--accent); margin-bottom: 15px; padding: 10px; background: rgba(108,99,255,0.05); border-radius: 8px; }
+  .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; padding: 20px; }
+  .step-header { font-family: 'Space Mono', monospace; font-size: 0.8rem; margin-bottom: 12px; color: var(--pivot-color); }
+  .mat-table { border-collapse: collapse; margin: 10px auto; direction: ltr; }
+  .mat-table td { border: 1px solid var(--border); padding: 8px 12px; text-align: center; font-family: 'Space Mono', monospace; }
+  .highlight { background: rgba(108,99,255,0.2); }
+  .btn { padding: 12px 24px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; transition: 0.3s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .result-box { background: var(--surface2); border: 1px solid var(--accent3); padding: 20px; border-radius: 12px; margin-top: 20px; }
+  .free-var { color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div style="text-align:center; margin-bottom: 40px;">
+    <h1 style="font-size: 2.5rem; color: #fff;">حل المعادلات بطريقة جاووس</h1>
+    <p style="color: var(--muted);">تحليل كامل للرتبة (Rank) والخطوات عنصر بعنصر</p>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; gap:20px; margin-bottom:20px;">
+      <div><label>عدد المعادلات: </label><input type="number" id="numEq" value="3" min="1" max="6" style="width:50px"></div>
+      <div><label>عدد المجاهيل: </label><input type="number" id="numVar" value="3" min="1" max="6" style="width:50px"></div>
+      <button class="btn btn-primary" onclick="buildMatrix()">تحديث الجدول</button>
+    </div>
+    
+    <div id="equationsPreview" class="eqn-display"></div>
+    <div id="matrixGrid" class="matrix-grid"></div>
+    
+    <div style="margin-top:20px;">
+      <button class="btn btn-primary" onclick="solveGauss()">ابدأ الحل التدريجي</button>
+    </div>
+  </div>
+
+  <div id="output"></div>
+</div>
+
+<script>
+let M_rows = 3, M_cols = 3;
+
+function buildMatrix() {
+  M_rows = parseInt(document.getElementById('numEq').value);
+  M_cols = parseInt(document.getElementById('numVar').value);
+  const grid = document.getElementById('matrixGrid');
+  grid.innerHTML = '';
+  
+  for (let i = 0; i < M_rows; i++) {
+    const row = document.createElement('div');
+    row.className = 'matrix-row';
+    for (let j = 0; j < M_cols; j++) {
+      const inp = document.createElement('input');
+      inp.id = `m_${i}_${j}`;
+      inp.placeholder = `a${i+1}${j+1}`;
+      inp.oninput = updateEqPreview;
+      row.appendChild(inp);
+    }
+    const sep = document.createElement('span'); sep.textContent = '|'; row.appendChild(sep);
+    const bInp = document.createElement('input');
+    bInp.id = `b_${i}`;
+    bInp.style.borderColor = 'var(--accent)';
+    bInp.oninput = updateEqPreview;
+    row.appendChild(bInp);
+    grid.appendChild(row);
+  }
+  updateEqPreview();
+}
+
+function updateEqPreview() {
+  let html = '';
+  for (let i = 0; i < M_rows; i++) {
+    let eq = `R${i+1}: `;
+    for (let j = 0; j < M_cols; j++) {
+      let val = document.getElementById(`m_${i}_${j}`).value || '0';
+      eq += `${val}x${j+1} ${j < M_cols-1 ? '+ ' : ''}`;
+    }
+    eq += ` = ${document.getElementById(`b_${i}`).value || '0'}`;
+    html += `<div>${eq}</div>`;
+  }
+  document.getElementById('equationsPreview').innerHTML = html;
+}
+
+function getMatrix() {
+  let mat = [];
+  for (let i = 0; i < M_rows; i++) {
+    let row = [];
+    for (let j = 0; j < M_cols; j++) row.push(parseFloat(document.getElementById(`m_${i}_${j}`).value) || 0);
+    row.push(parseFloat(document.getElementById(`b_${i}`).value) || 0);
+    mat.push(row);
+  }
+  return mat;
+}
+
+function renderMatrix(mat, highlightRow = -1, highlightCol = -1) {
+  let html = '<table class="mat-table">';
+  mat.forEach((row, i) => {
+    html += '<tr>';
+    row.forEach((cell, j) => {
+      let cls = (i === highlightRow && j === highlightCol) ? 'class="highlight"' : '';
+      html += `<td ${cls}>${Number.isInteger(cell) ? cell : cell.toFixed(2)}</td>`;
+    });
+    html += '</tr>';
+  });
+  return html + '</table>';
+}
+
+function solveGauss() {
+  let M = getMatrix();
+  const out = document.getElementById('output');
+  out.innerHTML = '<h2>خطوات الحل:</h2>';
+  
+  let steps = 0;
+  let pivotRow = 0;
+  let pivotCol = 0;
+
+  while (pivotRow < M_rows && pivotCol < M_cols) {
+    // 1. البحث عن Pivot
+    let max = Math.abs(M[pivotRow][pivotCol]);
+    let maxRow = pivotRow;
+    for (let i = pivotRow + 1; i < M_rows; i++) {
+      if (Math.abs(M[i][pivotCol]) > max) {
+        max = Math.abs(M[i][pivotCol]);
+        maxRow = i;
+      }
+    }
+
+    if (max < 1e-9) {
+      pivotCol++;
+      continue;
+    }
+
+    // تبديل الصفوف إذا لزم الأمر
+    if (maxRow !== pivotRow) {
+      [M[pivotRow], M[maxRow]] = [M[maxRow], M[pivotRow]];
+      out.innerHTML += `<div class="step-card"><div class="step-header">تبديل الصف R${pivotRow+1} مع R${maxRow+1}</div>${renderMatrix(M)}</div>`;
+    }
+
+    // 2. توحيد القطر الرئيسي (Normalize Pivot to 1)
+    let div = M[pivotRow][pivotCol];
+    if (div !== 1) {
+      for (let j = pivotCol; j <= M_cols; j++) M[pivotRow][j] /= div;
+      out.innerHTML += `<div class="step-card"><div class="step-header">جعل القطر الرئيسي = 1 (قسمة R${pivotRow+1} على ${div.toFixed(2)})</div>${renderMatrix(M, pivotRow, pivotCol)}</div>`;
+    }
+
+    // 3. تصفير ما تحت القطر "عنصر بعنصر"
+    for (let i = pivotRow + 1; i < M_rows; i++) {
+      let factor = M[i][pivotCol];
+      if (Math.abs(factor) > 1e-9) {
+        for (let j = pivotCol; j <= M_cols; j++) {
+          M[i][j] -= factor * M[pivotRow][j];
+        }
+        out.innerHTML += `<div class="step-card"><div class="step-header">تصفير العنصر تحت القطر في الصف R${i+1}</div>
+        <p>R${i+1} = R${i+1} - (${factor.toFixed(2)}) * R${pivotRow+1}</p>${renderMatrix(M, i, pivotCol)}</div>`;
+      }
+    }
+    pivotRow++;
+    pivotCol++;
+  }
+
+  analyzeSolution(M);
+}
+
+function analyzeSolution(M) {
+  let rankA = 0;
+  let rankAug = 0;
+  let n = M_cols;
+
+  for (let i = 0; i < M_rows; i++) {
+    let rowAEmpty = true;
+    for (let j = 0; j < M_cols; j++) if (Math.abs(M[i][j]) > 1e-9) rowAEmpty = false;
+    if (!rowAEmpty) rankA++;
+    
+    let rowAugEmpty = rowAEmpty && Math.abs(M[i][M_cols]) < 1e-9;
+    if (!rowAEmpty || Math.abs(M[i][M_cols]) > 1e-9) rankAug++;
+  }
+
+  let resHTML = `<div class="result-box"><h3>التحليل النهائي للرتبة:</h3>
+    <p>رتبة المصفوفة الأساسية (r) = <b>${rankA}</b></p>
+    <p>رتبة المصفوفة الموسعة = <b>${rankAug}</b></p>
+    <p>عدد المجاهيل (n) = <b>${n}</b></p>`;
+
+  if (rankA < rankAug) {
+    resHTML += `<h4 style="color:var(--accent2)">النتيجة: r < Rank(Aug) -> لا يوجد حل (System Inconsistent)</h4>`;
+  } else if (rankA === n) {
+    resHTML += `<h4 style="color:var(--accent3)">النتيجة: r = n -> يوجد حل وحيد (Unique Solution)</h4>`;
+    // Back substitution (Simple)
+    let solutions = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+      let sum = M[i][n];
+      for (let j = i + 1; j < n; j++) sum -= M[i][j] * solutions[j];
+      solutions[i] = sum / M[i][i];
+    }
+    resHTML += `<div style="margin-top:10px">` + solutions.map((s, idx) => `<div>x${idx+1} = <b>${s.toFixed(2)}</b></div>`).join('') + `</div>`;
+  } else {
+    resHTML += `<h4 style="color:var(--pivot-color)">النتيجة: r < n -> عدد لا نهائي من الحلول (Infinite Solutions)</h4>`;
+    resHTML += `<p>عدد الثوابت الاختيارية (Free Variables) = n - r = <b>${n - rankA}</b></p>`;
+  }
+
+  document.getElementById('output').innerHTML += resHTML + `</div>`;
+}
+
+// البدء عند تحميل الصفحة
+window.onload = buildMatrix;
+</script>
+
+</body>
+</html>
