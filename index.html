@@ -4,43 +4,250 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gauss Elimination Solver</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26;
-  --border: #2a2a40; --accent: #6c63ff; --accent2: #ff6584;
-  --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
-  --yellow: #ffd166; --teal: #06d6a0;
+  :root {
+    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a40;
+    --accent: #6c63ff; --accent2: #ff6584; --accent3: #43e97b; --text: #e8e8f0;
+    --muted: #6b6b8a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  
+  /* منع ظهور أسهم الزيادة والنقصان */
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+
+  /* الخلفية والأنيميشن */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; animation: drift 8s ease-in-out infinite; }
+  .orb1 { width: 400px; height: 400px; background: rgba(108,99,255,0.12); top: -100px; right: -100px; }
+  .orb2 { width: 300px; height: 300px; background: rgba(255,101,132,0.08); bottom: 10%; left: -80px; }
+  @keyframes drift { 0%,100% { transform: translate(0,0); } 50% { transform: translate(20px, -20px); } }
+
+  .container { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
+  .hero { text-align: center; padding: 40px 0; }
+  .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; margin-bottom: 24px; }
+  .matrix-wrapper { overflow-x: auto; padding: 10px 0; }
+  .matrix-grid { display: inline-grid; gap: 8px; min-width: 100%; }
+  .matrix-row { display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 8px; }
+
+  input {
+    background: var(--surface2); border: 1px solid var(--border); color: #fff;
+    font-family: 'Space Mono', monospace; padding: 12px; border-radius: 8px;
+    width: 75px; text-align: center; transition: 0.3s; font-size: 0.9rem;
+  }
+  input:focus { border-color: var(--accent); outline: none; background: rgba(108,99,255,0.1); }
+  .b-col { border-color: var(--accent); background: rgba(108,99,255,0.05); }
+
+  .btn { padding: 14px 30px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-family: 'Syne'; transition: 0.3s; text-transform: uppercase; }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), #8a84ff); color: white; }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(108,99,255,0.4); }
+
+  .eq-preview { font-family: 'Space Mono'; color: var(--accent3); background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 0.85rem; border-left: 3px solid var(--accent3); white-space: pre-line; }
+  
+  .step-card { border-left: 4px solid var(--accent); background: var(--surface2); margin-bottom: 20px; padding: 20px; border-radius: 0 12px 12px 0; }
+  .step-op { color: var(--accent3); font-weight: bold; margin-bottom: 12px; font-family: 'Space Mono'; font-size: 0.9rem; }
+
+  .rank-box { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
+  .stat { flex: 1; background: var(--surface); border: 1px solid var(--border); padding: 15px; border-radius: 12px; text-align: center; min-width: 120px; }
+  .stat .val { font-size: 1.8rem; color: var(--accent); font-weight: 800; display: block; }
+  .stat .lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-top: 5px; }
+
+  table { border-collapse: collapse; width: auto; margin: 10px 0; }
+  td { border: 1px solid var(--border); padding: 8px 12px; text-align: center; font-family: 'Space Mono'; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="container">
+  <div class="hero">
+    <h1>Advanced Gauss Solver</h1>
+    <p style="color: var(--muted); margin-top:10px;">// Fast Academic Matrix Intelligence</p>
+  </div>
+
+  <div class="card">
+    <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 150px;">
+        <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:8px">EQUATIONS (M)</label>
+        <input type="number" id="rows" value="3" style="width:100%">
+      </div>
+      <div style="flex: 1; min-width: 150px;">
+        <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:8px">UNKNOWN VARIABLES (N)</label>
+        <input type="number" id="cols" value="3" style="width:100%">
+      </div>
+      <button class="btn btn-primary" onclick="initWorkspace()">Update Grid</button>
+    </div>
+  </div>
+
+  <div id="workspace" class="card" style="display:none">
+    <div id="eqPreview" class="eq-preview"></div>
+    <div class="matrix-wrapper">
+      <div id="grid" class="matrix-grid"></div>
+    </div>
+    <div style="margin-top:25px; display:flex; gap:12px">
+      <button class="btn btn-primary" style="flex:2" onclick="solve()">Calculate Solution</button>
+      <button class="btn" style="background:var(--surface2); color:white; flex:1" onclick="resetToExample()">Load Example</button>
+    </div>
+  </div>
+
+  <div id="output"></div>
+</div>
+
+<script>
+let R, C;
+
+function initWorkspace(isExample = false) {
+    R = parseInt(document.getElementById('rows').value) || 3;
+    C = parseInt(document.getElementById('cols').value) || 3;
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    
+    const exampleValues = [[2, 1, -1, 8], [-3, -1, 2, -11], [-2, 1, 2, -3]];
+
+    for (let i = 0; i < R; i++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'matrix-row';
+        for (let j = 0; j <= C; j++) {
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.id = `cell-${i}-${j}`;
+            input.placeholder = j === C ? 'b' : `x${j+1}`;
+            if (j === C) input.classList.add('b-col');
+            
+            if (isExample && exampleValues[i] && exampleValues[i][j] !== undefined) {
+                input.value = exampleValues[i][j];
+            }
+
+            // Keyboard Arrow Navigation
+            input.addEventListener('keydown', function(e) {
+                let ni = i, nj = j;
+                if (e.key === 'ArrowRight') nj++;
+                if (e.key === 'ArrowLeft') nj--;
+                if (e.key === 'ArrowDown') ni++;
+                if (e.key === 'ArrowUp') ni--;
+                const next = document.getElementById(`cell-${ni}-${nj}`);
+                if (next) { e.preventDefault(); next.focus(); }
+            });
+
+            input.addEventListener('input', updatePreview);
+            rowDiv.appendChild(input);
+        }
+        grid.appendChild(rowDiv);
+    }
+    document.getElementById('workspace').style.display = 'block';
+    updatePreview();
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; min-height:100vh; overflow-x:hidden; }
 
-body::before {
-  content:''; position:fixed; inset:0;
-  background-image: linear-gradient(rgba(108,99,255,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(108,99,255,0.03) 1px,transparent 1px);
-  background-size:40px 40px; pointer-events:none; z-index:0;
+function updatePreview() {
+    let html = '';
+    for (let i = 0; i < R; i++) {
+        let terms = [];
+        for (let j = 0; j < C; j++) {
+            let val = document.getElementById(`cell-${i}-${j}`).value || '0';
+            terms.push(`${val}x${j+1}`);
+        }
+        let b = document.getElementById(`cell-${i}-${C}`).value || '0';
+        html += `Eq.${i+1}: ${terms.join(' + ')} = ${b}\n`;
+    }
+    document.getElementById('eqPreview').innerText = html.replace(/\+ -/g, '- ');
 }
-.orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; }
-.orb1 { width:500px; height:500px; background:rgba(108,99,255,0.1); top:-150px; right:-150px; }
 
-.wrap { position:relative; z-index:1; max-width:950px; margin:0 auto; padding:40px 20px; }
+function resetToExample() {
+    document.getElementById('rows').value = 3;
+    document.getElementById('cols').value = 3;
+    initWorkspace(true);
+}
 
-.hero { text-align:center; padding:30px 0; }
-.hero h1 { font-size:3rem; font-weight:900; background:linear-gradient(135deg,#fff, #6c63ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:10px; }
+function format(n) {
+    if (Math.abs(n) < 1e-10) return "0";
+    if (Number.isInteger(n)) return n.toString();
+    for (let d = 1; d <= 20; d++) {
+        let num = Math.round(n * d);
+        if (Math.abs(n - num / d) < 1e-6) return d === 1 ? `${num}` : `${num}/${d}`;
+    }
+    return n.toFixed(2);
+}
 
-.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; margin-bottom:20px; }
-.card-label { font-size:10px; letter-spacing:3px; color:var(--accent); text-transform:uppercase; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
-.card-label::after { content:''; flex:1; height:1px; background:var(--border); }
+function solve() {
+    let mat = [];
+    for (let i = 0; i < R; i++) {
+        mat[i] = [];
+        for (let j = 0; j <= C; j++) {
+            mat[i][j] = parseFloat(document.getElementById(`cell-${i}-${j}`).value) || 0;
+        }
+    }
 
-.setup-row { display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; margin-bottom:20px; }
-.field { display:flex; flex-direction:column; gap:6px; flex:1; }
-.field label { font-size:10px; color:var(--muted); text-transform:uppercase; }
+    const output = document.getElementById('output');
+    output.innerHTML = '<h3 style="margin-bottom:20px; color:var(--accent)">Logical Steps:</h3>';
+    let steps = "";
 
-input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-input[type=number] { -moz-appearance: textfield; background:var(--surface2); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:10px; outline:none; font-family:inherit; }
+    let h = 0, k = 0;
+    while (h < R && k < C) {
+        let i_max = h;
+        for (let i = h + 1; i < R; i++) if (Math.abs(mat[i][k]) > Math.abs(mat[i_max][k])) i_max = i;
+        if (Math.abs(mat[i_max][k]) < 1e-10) { k++; continue; }
+        if (h !== i_max) {
+            [mat[h], mat[i_max]] = [mat[i_max], mat[h]];
+            steps += renderStep(mat, `Swap Row ${h+1} ↔ Row ${i_max+1}`);
+        }
+        for (let i = h + 1; i < R; i++) {
+            let f = mat[i][k] / mat[h][k];
+            if (Math.abs(f) > 1e-10) {
+                for (let j = k; j <= C; j++) mat[i][j] -= f * mat[h][j];
+                steps += renderStep(mat, `R${i+1} = R${i+1} - (${format(f)})R${h+1}`);
+            }
+        }
+        h++; k++;
+    }
 
-.mrow { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-.cell { background:var(--surface2); border:1px solid var(--border); color:var(--text); width:75px; padding:10px; border-radius:8px; text-align:center; outline:none; }
-.cell:focus { border-color: var(--accent); background: rgba(108,99,255,0.05); }
-.aug-sep { width:2px; height:35px; background:var(--accent); opacity:0.3; margin:0 5px; }
+    let rA = 0, rAug = 0;
+    for (let i = 0; i < R; i++) {
+        let hasA = false, hasAug = false;
+        for (let j = 0; j < C; j++) if (Math.abs(mat[i][j]) > 1e-10) hasA = true;
+        for (let j = 0; j <= C; j++) if (Math.abs(mat[i][j]) > 1e-10) hasAug = true;
+        if (hasA) rA++;
+        if (hasAug) rAug++;
+    }
 
-.btn { padding:14px 28px; border-radius:12px; border:none; cursor:pointer; font-weight:bold; transition: 0.2s; background:var(--accent); color:#fff; width:1
+    let res = "Unique Solution"; let c = "var(--accent3)";
+    if (rA < rAug) { res = "No Solution"; c = "var(--accent2)"; }
+    else if (rA < C) { res = "Infinite Solutions"; c = "var(--accent)"; }
+
+    output.innerHTML += `
+        <div class="rank-box">
+            <div class="stat"><span class="val">${rA}</span><span class="lbl">Rank(A)</span></div>
+            <div class="stat"><span class="val">${rAug}</span><span class="lbl">Rank(Aug)</span></div>
+            <div class="stat"><span class="val">${C}</span><span class="lbl">n (Unknowns)</span></div>
+            <div class="stat" style="border-color:${c}"><span class="val" style="color:${c}; font-size:1.1rem">${res}</span><span class="lbl">Result Logic</span></div>
+        </div>
+        ${steps}
+    `;
+    output.scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderStep(m, title) {
+    let h = `<div class="step-card"><div class="step-op">◆ ${title}</div><div style="overflow-x:auto"><table>`;
+    for (let i = 0; i < R; i++) {
+        h += "<tr>";
+        for (let j = 0; j <= C; j++) {
+            h += `<td>${format(m[i][j])}</td>`;
+            if (j === C - 1) h += `<td style="border:none; color:var(--border)">|</td>`;
+        }
+        h += "</tr>";
+    }
+    return h + "</table></div></div>";
+}
+
+window.onload = resetToExample;
+</script>
+</body>
+</html>
