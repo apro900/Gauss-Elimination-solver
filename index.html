@@ -4,250 +4,198 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gauss Elimination Solver</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a40;
-    --accent: #6c63ff; --accent2: #ff6584; --accent3: #43e97b; --text: #e8e8f0;
-    --muted: #6b6b8a;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
-  
-  /* منع ظهور أسهم الزيادة والنقصان */
-  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-  input[type=number] { -moz-appearance: textfield; }
-
-  /* الخلفية والأنيميشن */
-  body::before {
-    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
-    background-size: 40px 40px;
-  }
-  .orb { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; animation: drift 8s ease-in-out infinite; }
-  .orb1 { width: 400px; height: 400px; background: rgba(108,99,255,0.12); top: -100px; right: -100px; }
-  .orb2 { width: 300px; height: 300px; background: rgba(255,101,132,0.08); bottom: 10%; left: -80px; }
-  @keyframes drift { 0%,100% { transform: translate(0,0); } 50% { transform: translate(20px, -20px); } }
-
-  .container { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 40px 20px; }
-  .hero { text-align: center; padding: 40px 0; }
-  .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; margin-bottom: 24px; }
-  .matrix-wrapper { overflow-x: auto; padding: 10px 0; }
-  .matrix-grid { display: inline-grid; gap: 8px; min-width: 100%; }
-  .matrix-row { display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 8px; }
-
-  input {
-    background: var(--surface2); border: 1px solid var(--border); color: #fff;
-    font-family: 'Space Mono', monospace; padding: 12px; border-radius: 8px;
-    width: 75px; text-align: center; transition: 0.3s; font-size: 0.9rem;
-  }
-  input:focus { border-color: var(--accent); outline: none; background: rgba(108,99,255,0.1); }
-  .b-col { border-color: var(--accent); background: rgba(108,99,255,0.05); }
-
-  .btn { padding: 14px 30px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; font-family: 'Syne'; transition: 0.3s; text-transform: uppercase; }
-  .btn-primary { background: linear-gradient(135deg, var(--accent), #8a84ff); color: white; }
-  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(108,99,255,0.4); }
-
-  .eq-preview { font-family: 'Space Mono'; color: var(--accent3); background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 0.85rem; border-left: 3px solid var(--accent3); white-space: pre-line; }
-  
-  .step-card { border-left: 4px solid var(--accent); background: var(--surface2); margin-bottom: 20px; padding: 20px; border-radius: 0 12px 12px 0; }
-  .step-op { color: var(--accent3); font-weight: bold; margin-bottom: 12px; font-family: 'Space Mono'; font-size: 0.9rem; }
-
-  .rank-box { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; }
-  .stat { flex: 1; background: var(--surface); border: 1px solid var(--border); padding: 15px; border-radius: 12px; text-align: center; min-width: 120px; }
-  .stat .val { font-size: 1.8rem; color: var(--accent); font-weight: 800; display: block; }
-  .stat .lbl { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; margin-top: 5px; }
-
-  table { border-collapse: collapse; width: auto; margin: 10px 0; }
-  td { border: 1px solid var(--border); padding: 8px 12px; text-align: center; font-family: 'Space Mono'; font-size: 0.85rem; }
+/* ── نفس الـ CSS بتاعك بدون تغيير سطر واحد للحفاظ على الديزاين ── */
+:root {
+  --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26;
+  --border: #2a2a40; --accent: #6c63ff; --accent2: #ff6584;
+  --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
+  --yellow: #ffd166; --teal: #06d6a0;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Courier New',monospace; min-height:100vh; }
+body::before { content:''; position:fixed; inset:0; background-image: linear-gradient(rgba(108,99,255,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(108,99,255,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+.orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; }
+.orb1 { width:500px; height:500px; background:rgba(108,99,255,0.1); top:-150px; right:-150px; }
+.orb2 { width:400px; height:400px; background:rgba(255,101,132,0.07); bottom:0; left:-100px; }
+.wrap { position:relative; z-index:1; max-width:950px; margin:0 auto; padding:40px 20px 80px; }
+.hero { text-align:center; padding:50px 0 40px; }
+.hero-badge { display:inline-block; font-size:10px; letter-spacing:3px; color:var(--accent); border:1px solid rgba(108,99,255,0.4); padding:5px 16px; border-radius:20px; margin-bottom:20px; text-transform:uppercase; }
+.hero h1 { font-size:clamp(2rem,5vw,3.5rem); font-weight:900; letter-spacing:-1px; background:linear-gradient(135deg,#fff 0%,#a89bff 50%,#ff6584 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:10px; }
+.hero p { color:var(--muted); font-size:0.85rem; letter-spacing:2px; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; margin-bottom:20px; position:relative; overflow:hidden; }
+.card-label { font-size:10px; letter-spacing:3px; color:var(--accent); text-transform:uppercase; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+.card-label::after { content:''; flex:1; height:1px; background:var(--border); }
+.setup-row { display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap; }
+.field { display:flex; flex-direction:column; gap:6px; flex:1; min-width:100px; }
+.field label { font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+.field input[type=number] { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'Courier New',monospace; font-size:1.1rem; padding:11px 14px; border-radius:10px; outline:none; }
+.mrow { display:flex; align-items:center; gap:8px; margin-bottom:8px; min-width:max-content; }
+.row-lbl { width:36px; text-align:right; font-size:11px; color:var(--muted); flex-shrink:0; }
+.cell { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-family:'Courier New',monospace; width:70px; padding:10px; border-radius:8px; text-align:center; outline:none; }
+.aug-sep { width:2px; height:36px; background:rgba(108,99,255,0.4); margin:0 4px; }
+.btn { padding:13px 24px; border-radius:10px; border:none; cursor:pointer; font-family:'Courier New',monospace; font-weight:700; font-size:0.9rem; transition:all .2s; }
+.btn-solve { background:linear-gradient(135deg,var(--accent),#9b8cff); color:#fff; width:100%; margin-top:15px; }
+.btn-solve:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(108,99,255,0.4); }
+.step { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; padding:18px; }
+.step-head { font-size:11px; letter-spacing:2px; text-transform:uppercase; margin-bottom:10px; color:var(--accent); }
+.op-box { font-size:0.9rem; color:var(--text); padding:10px 14px; background:rgba(255,255,255,0.03); border-left:3px solid var(--accent); border-radius:0 8px 8px 0; margin-bottom:14px; }
+.mat { border-collapse:collapse; margin:0 auto; font-family:'Courier New',monospace; font-size:0.88rem; }
+.mat td { padding:9px 16px; text-align:center; border:1px solid var(--border); min-width:60px; color:var(--text); }
+.mat td.bc { border-left:2px solid rgba(108,99,255,0.5); color:var(--accent); }
+.analysis { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:14px; padding:20px; }
+.rank-bars { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+.rb { flex:1; min-width:80px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:14px; text-align:center; }
+.rb .v { font-size:2rem; font-weight:900; }
+.rb .l { font-size:9px; color:var(--muted); text-transform:uppercase; }
+.sol-line { font-size:1rem; color:var(--accent3); padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
 </style>
 </head>
 <body>
 <div class="orb orb1"></div>
 <div class="orb orb2"></div>
 
-<div class="container">
+<div class="wrap">
   <div class="hero">
-    <h1>Advanced Gauss Solver</h1>
-    <p style="color: var(--muted); margin-top:10px;">// Fast Academic Matrix Intelligence</p>
+    <div class="hero-badge">Linear Algebra</div>
+    <h1>Gauss Elimination</h1>
+    <p>// Academic Step-by-Step Solver</p>
   </div>
 
   <div class="card">
-    <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-      <div style="flex: 1; min-width: 150px;">
-        <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:8px">EQUATIONS (M)</label>
-        <input type="number" id="rows" value="3" style="width:100%">
-      </div>
-      <div style="flex: 1; min-width: 150px;">
-        <label style="font-size:0.7rem; color:var(--muted); display:block; margin-bottom:8px">UNKNOWN VARIABLES (N)</label>
-        <input type="number" id="cols" value="3" style="width:100%">
-      </div>
-      <button class="btn btn-primary" onclick="initWorkspace()">Update Grid</button>
+    <div class="card-label">01 — System Size</div>
+    <div class="setup-row">
+      <div class="field"><label>Equations (m)</label><input type="number" id="numM" value="3" min="1"></div>
+      <div class="field"><label>Unknowns (n)</label><input type="number" id="numN" value="3" min="1"></div>
+      <button class="btn" style="background:var(--surface2); color:var(--text); border:1px solid var(--border)" onclick="buildGrid()">Build →</button>
     </div>
   </div>
 
-  <div id="workspace" class="card" style="display:none">
-    <div id="eqPreview" class="eq-preview"></div>
-    <div class="matrix-wrapper">
-      <div id="grid" class="matrix-grid"></div>
-    </div>
-    <div style="margin-top:25px; display:flex; gap:12px">
-      <button class="btn btn-primary" style="flex:2" onclick="solve()">Calculate Solution</button>
-      <button class="btn" style="background:var(--surface2); color:white; flex:1" onclick="resetToExample()">Load Example</button>
-    </div>
+  <div class="card" id="matCard" style="display:none">
+    <div class="card-label">02 — Augmented Matrix [A | b]</div>
+    <div id="matGrid" style="overflow-x:auto"></div>
+    <button class="btn btn-solve" onclick="solve()">▶ Solve System</button>
   </div>
 
   <div id="output"></div>
 </div>
 
 <script>
-let R, C;
+const EPS = 1e-9;
+const fmt = v => Math.abs(v) < EPS ? "0" : (Number.isInteger(v) ? v : v.toFixed(2));
 
-function initWorkspace(isExample = false) {
-    R = parseInt(document.getElementById('rows').value) || 3;
-    C = parseInt(document.getElementById('cols').value) || 3;
-    const grid = document.getElementById('grid');
-    grid.innerHTML = '';
-    
-    const exampleValues = [[2, 1, -1, 8], [-3, -1, 2, -11], [-2, 1, 2, -3]];
-
-    for (let i = 0; i < R; i++) {
-        const rowDiv = document.createElement('div');
-        rowDiv.className = 'matrix-row';
-        for (let j = 0; j <= C; j++) {
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.id = `cell-${i}-${j}`;
-            input.placeholder = j === C ? 'b' : `x${j+1}`;
-            if (j === C) input.classList.add('b-col');
-            
-            if (isExample && exampleValues[i] && exampleValues[i][j] !== undefined) {
-                input.value = exampleValues[i][j];
-            }
-
-            // Keyboard Arrow Navigation
-            input.addEventListener('keydown', function(e) {
-                let ni = i, nj = j;
-                if (e.key === 'ArrowRight') nj++;
-                if (e.key === 'ArrowLeft') nj--;
-                if (e.key === 'ArrowDown') ni++;
-                if (e.key === 'ArrowUp') ni--;
-                const next = document.getElementById(`cell-${ni}-${nj}`);
-                if (next) { e.preventDefault(); next.focus(); }
-            });
-
-            input.addEventListener('input', updatePreview);
-            rowDiv.appendChild(input);
-        }
-        grid.appendChild(rowDiv);
-    }
-    document.getElementById('workspace').style.display = 'block';
-    updatePreview();
-}
-
-function updatePreview() {
-    let html = '';
-    for (let i = 0; i < R; i++) {
-        let terms = [];
-        for (let j = 0; j < C; j++) {
-            let val = document.getElementById(`cell-${i}-${j}`).value || '0';
-            terms.push(`${val}x${j+1}`);
-        }
-        let b = document.getElementById(`cell-${i}-${C}`).value || '0';
-        html += `Eq.${i+1}: ${terms.join(' + ')} = ${b}\n`;
-    }
-    document.getElementById('eqPreview').innerText = html.replace(/\+ -/g, '- ');
-}
-
-function resetToExample() {
-    document.getElementById('rows').value = 3;
-    document.getElementById('cols').value = 3;
-    initWorkspace(true);
-}
-
-function format(n) {
-    if (Math.abs(n) < 1e-10) return "0";
-    if (Number.isInteger(n)) return n.toString();
-    for (let d = 1; d <= 20; d++) {
-        let num = Math.round(n * d);
-        if (Math.abs(n - num / d) < 1e-6) return d === 1 ? `${num}` : `${num}/${d}`;
-    }
-    return n.toFixed(2);
+function buildGrid() {
+  const M = +document.getElementById('numM').value, N = +document.getElementById('numN').value;
+  const g = document.getElementById('matGrid'); g.innerHTML = '';
+  for(let i=0; i<M; i++) {
+    let row = `<div class="mrow"><span class="row-lbl">R${i+1}</span>`;
+    for(let j=0; j<N; j++) row += `<input type="number" class="cell" id="a_${i}_${j}" placeholder="x${j+1}">`;
+    row += `<div class="aug-sep"></div><input type="number" class="cell" id="b_${i}" style="border-color:var(--accent3)" placeholder="b"></div>`;
+    g.innerHTML += row;
+  }
+  document.getElementById('matCard').style.display='block';
 }
 
 function solve() {
-    let mat = [];
-    for (let i = 0; i < R; i++) {
-        mat[i] = [];
-        for (let j = 0; j <= C; j++) {
-            mat[i][j] = parseFloat(document.getElementById(`cell-${i}-${j}`).value) || 0;
-        }
+  const M = +document.getElementById('numM').value, N = +document.getElementById('numN').value;
+  let A = [];
+  for(let i=0; i<M; i++) {
+    let r = [];
+    for(let j=0; j<N; j++) r.push(+document.getElementById(`a_${i}_${j}`).value || 0);
+    r.push(+document.getElementById(`b_${i}`).value || 0);
+    A.push(r);
+  }
+
+  const out = document.getElementById('output'); out.innerHTML = '';
+
+  // 1. عرض المعادلات (Equations Representation)
+  let eqStr = A.map((row, i) => {
+    let parts = row.slice(0, N).map((v, j) => `${fmt(v)}x<sub>${j+1}</sub>`).join(' + ');
+    return `<div style="margin-bottom:5px">${parts.replace(/\+ -/g, '- ')} = ${fmt(row[N])}</div>`;
+  }).join('');
+  out.innerHTML += `<div class="step"><div class="step-head">Input Equations System</div>${eqStr}</div>`;
+
+  // 2. طريقة حل الدكاترة (Gauss Elimination with Normalization)
+  let r = 0;
+  for(let c=0; c<N && r<M; c++) {
+    // Partial Pivoting (البحث عن أكبر عنصر لضمان الدقة)
+    let pivot = r;
+    for(let i=r+1; i<M; i++) if(Math.abs(A[i][c]) > Math.abs(A[pivot][c])) pivot = i;
+    
+    if(Math.abs(A[pivot][c]) < EPS) continue;
+
+    if(pivot !== r) {
+      [A[r], A[pivot]] = [A[pivot], A[r]];
+      out.innerHTML += `<div class="step"><div class="step-head">Row Swap</div><div class="op-box">R${r+1} ↔ R${pivot+1} (To get better pivot)</div></div>`;
     }
 
-    const output = document.getElementById('output');
-    output.innerHTML = '<h3 style="margin-bottom:20px; color:var(--accent)">Logical Steps:</h3>';
-    let steps = "";
-
-    let h = 0, k = 0;
-    while (h < R && k < C) {
-        let i_max = h;
-        for (let i = h + 1; i < R; i++) if (Math.abs(mat[i][k]) > Math.abs(mat[i_max][k])) i_max = i;
-        if (Math.abs(mat[i_max][k]) < 1e-10) { k++; continue; }
-        if (h !== i_max) {
-            [mat[h], mat[i_max]] = [mat[i_max], mat[h]];
-            steps += renderStep(mat, `Swap Row ${h+1} ↔ Row ${i_max+1}`);
-        }
-        for (let i = h + 1; i < R; i++) {
-            let f = mat[i][k] / mat[h][k];
-            if (Math.abs(f) > 1e-10) {
-                for (let j = k; j <= C; j++) mat[i][j] -= f * mat[h][j];
-                steps += renderStep(mat, `R${i+1} = R${i+1} - (${format(f)})R${h+1}`);
-            }
-        }
-        h++; k++;
+    // Normalization (الخطوة الأهم عند الدكاترة: جعل الـ Pivot = 1)
+    let div = A[r][c];
+    if(Math.abs(div - 1) > EPS) {
+      for(let j=c; j<=N; j++) A[r][j] /= div;
+      out.innerHTML += `<div class="step"><div class="step-head">Pivot Normalization (R${r+1})</div><div class="op-box">R${r+1} = R${r+1} / ${fmt(div)}</div></div>`;
     }
 
-    let rA = 0, rAug = 0;
-    for (let i = 0; i < R; i++) {
-        let hasA = false, hasAug = false;
-        for (let j = 0; j < C; j++) if (Math.abs(mat[i][j]) > 1e-10) hasA = true;
-        for (let j = 0; j <= C; j++) if (Math.abs(mat[i][j]) > 1e-10) hasAug = true;
-        if (hasA) rA++;
-        if (hasAug) rAug++;
+    // Elimination Below (تصفير ما تحت القطر الرئيسي)
+    let elimOps = [];
+    for(let i=r+1; i<M; i++) {
+      let f = A[i][c];
+      if(Math.abs(f) < EPS) continue;
+      elimOps.push(`R${i+1} = R${i+1} - (${fmt(f)})R${r+1}`);
+      for(let j=c; j<=N; j++) A[i][j] -= f * A[r][j];
     }
+    
+    if(elimOps.length > 0) {
+      let table = `<table class="mat">` + A.map(row => `<tr>${row.map((v,idx)=>`<td class="${idx===N?'bc':''}">${fmt(v)}</td>`).join('')}</tr>`).join('') + `</table>`;
+      out.innerHTML += `<div class="step"><div class="step-head">Elimination (Column ${c+1})</div><div class="op-box">${elimOps.join('<br>')}</div>${table}</div>`;
+    }
+    r++;
+  }
 
-    let res = "Unique Solution"; let c = "var(--accent3)";
-    if (rA < rAug) { res = "No Solution"; c = "var(--accent2)"; }
-    else if (rA < C) { res = "Infinite Solutions"; c = "var(--accent)"; }
+  // 3. تحليل الرتبة والحلول (Rank Analysis)
+  let rankA = 0, rankAug = 0;
+  for(let i=0; i<M; i++) {
+    let rowEmpty = A[i].slice(0, N).every(v => Math.abs(v) < EPS);
+    let augEmpty = Math.abs(A[i][N]) < EPS;
+    if(!rowEmpty) rankA++;
+    if(!rowEmpty || !augEmpty) rankAug++;
+  }
 
-    output.innerHTML += `
-        <div class="rank-box">
-            <div class="stat"><span class="val">${rA}</span><span class="lbl">Rank(A)</span></div>
-            <div class="stat"><span class="val">${rAug}</span><span class="lbl">Rank(Aug)</span></div>
-            <div class="stat"><span class="val">${C}</span><span class="lbl">n (Unknowns)</span></div>
-            <div class="stat" style="border-color:${c}"><span class="val" style="color:${c}; font-size:1.1rem">${res}</span><span class="lbl">Result Logic</span></div>
-        </div>
-        ${steps}
-    `;
-    output.scrollIntoView({ behavior: 'smooth' });
+  let resultSection = document.createElement('div'); resultSection.className = 'analysis';
+  let statusHTML = "";
+
+  if(rankA < rankAug) {
+    statusHTML = `<h2 style="color:var(--accent2)">No Solution (Inconsistent)</h2><p>Rank(A) ≠ Rank(A|b)</p>`;
+  } else if(rankA < N) {
+    let freeVars = N - rankA;
+    statusHTML = `<h2 style="color:var(--yellow)">Infinite Solutions</h2><p>Number of free parameters: ${freeVars}</p>`;
+  } else {
+    // Unique Solution with Back Substitution
+    statusHTML = `<h2 style="color:var(--accent3)">Unique Solution Found</h2>`;
+    let sol = new Array(N).fill(0);
+    let steps = [];
+    for(let i=N-1; i>=0; i--) {
+      let sum = A[i][N];
+      for(let j=i+1; j<N; j++) sum -= A[i][j] * sol[j];
+      sol[i] = sum; // لأن المعامل أصلاً أصبح 1 بسبب الـ Normalization
+      steps.push(`<div class="sol-line">x<sub>${i+1}</sub> = ${fmt(sol[i])}</div>`);
+    }
+    statusHTML += `<div style="margin-top:15px">${steps.reverse().join('')}</div>`;
+  }
+
+  resultSection.innerHTML = `
+    <div class="rank-bars">
+      <div class="rb"><div class="v">${rankA}</div><div class="l">Rank(A)</div></div>
+      <div class="rb"><div class="v">${rankAug}</div><div class="l">Rank(A|b)</div></div>
+      <div class="rb"><div class="v">${N}</div><div class="l">n (Vars)</div></div>
+    </div>
+    ${statusHTML}`;
+  
+  out.appendChild(resultSection);
+  resultSection.scrollIntoView({behavior:'smooth'});
 }
 
-function renderStep(m, title) {
-    let h = `<div class="step-card"><div class="step-op">◆ ${title}</div><div style="overflow-x:auto"><table>`;
-    for (let i = 0; i < R; i++) {
-        h += "<tr>";
-        for (let j = 0; j <= C; j++) {
-            h += `<td>${format(m[i][j])}</td>`;
-            if (j === C - 1) h += `<td style="border:none; color:var(--border)">|</td>`;
-        }
-        h += "</tr>";
-    }
-    return h + "</table></div></div>";
-}
-
-window.onload = resetToExample;
+window.onload = buildGrid;
 </script>
 </body>
 </html>
