@@ -1,196 +1,29 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Gauss Solver — Full Academic Edition</title>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gauss Solver — Academic Pro Edition</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a40;
-    --accent: #7aa2f7; --success: #9ece6a; --warning: #e0af68; --error: #f7768e;
-    --text: #c0caf5; --muted: #565f89;
+    --accent: #6c63ff; --accent2: #ff6584; --accent3: #43e97b;
+    --text: #e8e8f0; --muted: #6b6b8a;
   }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: 'Tajawal', sans-serif; padding: 30px; }
-  .container { max-width: 1100px; margin: 0 auto; }
-  
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; margin-bottom: 25px; }
-  h1 { text-align: center; color: var(--accent); margin-bottom: 30px; }
-
-  /* Input Section */
-  .setup-bar { display: flex; gap: 20px; justify-content: center; margin-bottom: 25px; }
-  input[type=number] { 
-    background: var(--surface2); border: 1px solid var(--border); color: white; 
-    padding: 10px; border-radius: 8px; width: 80px; text-align: center; font-family: 'Space Mono';
-  }
-  .matrix-grid { display: grid; gap: 10px; justify-content: center; overflow-x: auto; margin-bottom: 25px; }
-  .matrix-row { display: flex; align-items: center; gap: 8px; }
-  .aug-line { width: 2px; height: 40px; background: var(--accent); margin: 0 10px; }
-
-  .btn {
-    display: block; width: 250px; margin: 0 auto; padding: 15px; border-radius: 12px;
-    background: var(--accent); color: var(--bg); font-weight: bold; cursor: pointer; border: none;
+  body {
+    background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif;
+    min-height: 100vh; padding: 40px 20px;
   }
 
-  /* Results Section */
-  .step-box { border-right: 4px solid var(--accent); padding: 15px; background: rgba(122,162,247,0.05); margin: 15px 0; border-radius: 0 8px 8px 0; }
-  .op-tag { font-family: 'Space Mono'; font-size: 0.9rem; color: var(--warning); margin-bottom: 10px; display: block; }
-  
-  .mat-display { border-collapse: collapse; margin: 10px 0; font-family: 'Space Mono'; font-size: 0.9rem; }
-  .mat-display td { padding: 8px 15px; border: 1px solid var(--border); text-align: center; min-width: 60px; }
-
-  .logic-panel { border: 1px solid var(--success); background: rgba(158,206,106,0.05); padding: 25px; border-radius: 12px; margin-top: 30px; }
-  .final-eqn { font-family: 'Space Mono', monospace; font-size: 1.1rem; color: var(--success); background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; margin: 10px 0; }
-</style>
-</head>
-<body>
-
-<div class="container">
-  <div class="card">
-    <h1>مُحلل جوس الأكاديمي الشامل</h1>
-    
-    <div class="setup-bar">
-      <div>المعادلات (m): <input type="number" id="rows" value="3" onchange="initGrid()"></div>
-      <div>المجاهيل (n): <input type="number" id="cols" value="3" onchange="initGrid()"></div>
-    </div>
-
-    <div id="grid" class="matrix-grid"></div>
-    <button class="btn" onclick="solve()">حل النظام الآن</button>
-  </div>
-
-  <div id="output"></div>
-</div>
-
-<script>
-// مثال جاهز 3x3 عند التحميل
-const defaultValues = [
-  [1, 2, 3, 6],
-  [2, 4, 6, 12],
-  [1, 1, 1, 3]
-];
-
-function initGrid() {
-  const r = +document.getElementById('rows').value;
-  const c = +document.getElementById('cols').value;
-  const g = document.getElementById('grid');
-  g.innerHTML = '';
-  
-  for(let i=0; i<r; i++) {
-    let rowDiv = document.createElement('div');
-    rowDiv.className = 'matrix-row';
-    for(let j=0; j<c; j++) {
-      let val = (i < defaultValues.length && j < defaultValues[0].length - 1) ? defaultValues[i][j] : "";
-      rowDiv.innerHTML += `<input type="number" class="cell" id="v_${i}_${j}" value="${val}" placeholder="x${j+1}">`;
-    }
-    rowDiv.innerHTML += `<div class="aug-line"></div>`;
-    let bVal = (i < defaultValues.length) ? defaultValues[i][defaultValues[0].length-1] : "";
-    rowDiv.innerHTML += `<input type="number" class="cell" id="b_${i}" value="${bVal}" style="border-color:var(--accent)" placeholder="b">`;
-    g.appendChild(rowDiv);
-  }
-}
-
-function solve() {
-  const m = +document.getElementById('rows').value;
-  const n = +document.getElementById('cols').value;
-  let mat = [];
-  for(let i=0; i<m; i++){
-    let row = [];
-    for(let j=0; j<n; j++) row.push(+document.getElementById(`v_${i}_${j}`).value || 0);
-    row.push(+document.getElementById(`b_${i}`).value || 0);
-    mat.push(row);
+  /* Grid Background Effect */
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none; z-index: 0;
   }
 
-  const out = document.getElementById('output');
-  out.innerHTML = '<h2>خطوات الحل الأكاديمية:</h2>';
-
-  let r = 0;
-  for(let c=0; c<n && r<m; c++) {
-    let pivot = r;
-    while(pivot < m && Math.abs(mat[pivot][c]) < 1e-10) pivot++;
-    if(pivot === m) continue;
-
-    if(pivot !== r) {
-      [mat[r], mat[pivot]] = [mat[pivot], mat[r]];
-      render(mat, n, `تبديل الصفوف (Swap): R${r+1} ↔ R${pivot+1}`, out);
-    }
-
-    for(let i=r+1; i<m; i++) {
-      if(Math.abs(mat[i][c]) > 1e-10) {
-        let v1 = mat[r][c], v2 = mat[i][c];
-        // Integer Scaling Logic: R_i = v1*R_i - v2*R_r
-        for(let j=c; j<=n; j++) mat[i][j] = (v1 * mat[i][j]) - (v2 * mat[r][j]);
-        render(mat, n, `تصفير ما تحت القطر: R${i+1} = (${v1})R${i+1} - (${v2})R${r+1}`, out);
-      }
-    }
-    r++;
-  }
-  analyze(mat, m, n, out);
-}
-
-function render(mat, n, op, container) {
-  let html = `<div class="step-box"><span class="op-tag"># ${op}</span><table class="mat-display">`;
-  mat.forEach(row => {
-    html += '<tr>';
-    row.forEach((v, idx) => html += `<td class="${idx===n?'aug-line-td':''}">${Number.isInteger(v)?v:v.toFixed(2)}</td>`);
-    html += '</tr>';
-  });
-  container.innerHTML += html + '</table></div>';
-}
-
-function analyze(mat, m, n, out) {
-  let rA = 0, rAB = 0;
-  let pivotCols = [];
-  for(let i=0; i<m; i++) {
-    let rowA = false, rowAB = false;
-    for(let j=0; j<n; j++) if(Math.abs(mat[i][j]) > 1e-10) { if(!rowA) pivotCols.push(j); rowA = true; }
-    for(let j=0; j<=n; j++) if(Math.abs(mat[i][j]) > 1e-10) rowAB = true;
-    if(rowA) rA++; if(rowAB) rAB++;
-  }
-
-  let html = `<div class="logic-panel"><h3>الاستنتاج النهائي:</h3>`;
-  html += `<p>عدد المجاهيل (n) = ${n} | رتبة المصفوفة Rank(A) = ${rA} | رتبة Rank(A|B) = ${rAB}</p>`;
-
-  if(rA < rAB) {
-    html += `<p style="color:var(--error)">النظام غير متسق (No Solution) لأن Rank(A) ≠ Rank(A|B).</p>`;
-  } else if(rA === n) {
-    html += `<p style="color:var(--success)">بما أن r = n = ${n}، إذن يوجد <strong>حل وحيد (Unique Solution)</strong>:</p>`;
-    html += backSub(mat, rA, n);
-  } else {
-    let free = n - rA;
-    html += `<p style="color:var(--warning)">بما أن n > r (${n} > ${rA})، إذن يوجد <strong>عدد لا نهائي من الحلول</strong>.</p>`;
-    html += `<p>عدد المتغيرات الحرة = n - r = ${n} - ${rA} = ${free} متغيرات حرة.</p><hr style="margin:15px 0; opacity:0.1">`;
-    html += infinite(mat, rA, n, pivotCols);
-  }
-  out.innerHTML += html + `</div>`;
-}
-
-function backSub(mat, r, n) {
-  let res = new Array(n).fill(0);
-  let html = "";
-  for(let i=r-1; i>=0; i--) {
-    let p = mat[i].findIndex((v, idx) => idx < n && Math.abs(v) > 1e-10);
-    let sum = mat[i][n];
-    for(let j=p+1; j<n; j++) sum -= mat[i][j] * res[j];
-    res[p] = sum / mat[i][p];
-    html += `<div class="final-eqn">x${p+1} = ${res[p].toFixed(2)}</div>`;
-  }
-  return html;
-}
-
-function infinite(mat, r, n, pivots) {
-  let free = [];
-  for(let j=0; j<n; j++) if(!pivots.includes(j)) free.push(j);
-  let syms = ['s', 't', 'k', 'u', 'v'];
-  let map = {};
-  let html = "<h4>1. فرض المتغيرات الحرة:</h4>";
-  free.forEach((c, idx) => {
-    map[c] = syms[idx % syms.length];
-    html += `<div class="final-eqn">نفرض x${c+1} = ${map[c]}</div>`;
-  });
-  
-  html += "<h4>2. استنتاج المعادلات العامة:</h4>";
-  for(let i=r-1; i>=0; i--) {
-    let p = pivots[i];
-    let rhs = `${mat[i][n]}`;
-    for(let j=p+1; j<n; j++) {
-      if(Math.abs(mat[i][j]) > 1
+  .container { position: relative; z
