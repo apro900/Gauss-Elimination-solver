@@ -3,52 +3,198 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gauss Elimination - Integer Method</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>Gauss Elimination - Professional Academic Solver</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0a0f; --surface: #12121a; --border: #2a2a40;
     --accent: #6c63ff; --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
   }
-  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 40px 20px; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 40px 20px; line-height: 1.6; }
   .container { max-width: 900px; margin: 0 auto; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; margin-bottom: 20px; }
+  
+  /* Input Section */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 25px; margin-bottom: 25px; }
   .matrix-grid { display: grid; gap: 10px; margin: 20px 0; overflow-x: auto; }
   .matrix-row { display: flex; align-items: center; gap: 8px; }
-  .matrix-row input { background: #1a1a26; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 8px; width: 70px; text-align: center; font-family: 'Space Mono'; }
-  .btn { padding: 12px 25px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; width: 100%; transition: 0.3s; background: var(--accent); color: white; }
   
-  /* Step Styling */
-  .step-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 15px; background: var(--surface); overflow: hidden; }
-  .step-op { padding: 10px 20px; background: rgba(108,99,255,0.1); color: var(--accent); font-family: 'Space Mono'; font-size: 0.8rem; border-bottom: 1px solid var(--border); }
-  .mat-table { border-collapse: collapse; margin: 20px auto; font-family: 'Space Mono'; }
-  .mat-table td { padding: 8px 15px; border: 1px solid var(--border); text-align: center; }
-  .aug-sep { border-left: 2px solid var(--accent) !important; }
+  /* Remove number arrows */
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
 
-  .analysis { border: 1px solid var(--accent3); padding: 20px; border-radius: 12px; background: rgba(67,233,123,0.05); }
+  input.cell { 
+    background: #1a1a26; border: 1px solid var(--border); color: white; 
+    padding: 10px; border-radius: 8px; width: 65px; text-align: center; 
+    font-family: 'Space Mono'; outline: none; transition: 0.3s;
+  }
+  input.cell:focus { border-color: var(--accent); background: rgba(108,99,255,0.1); }
+  .eqn-preview { font-family: 'Space Mono'; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 10px; margin-top: 15px; }
+
+  /* Output Styling */
+  .step-card { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; background: var(--surface); overflow: hidden; }
+  .step-op { padding: 12px 20px; background: rgba(108,99,255,0.1); color: var(--accent); font-family: 'Space Mono'; font-size: 0.85rem; border-bottom: 1px solid var(--border); }
+  .mat-table { border-collapse: collapse; margin: 20px auto; font-family: 'Space Mono'; }
+  .mat-table td { padding: 10px 18px; border: 1px solid var(--border); text-align: center; min-width: 60px; }
+  .aug-sep { border-left: 2px solid var(--accent) !important; color: var(--accent3); }
+
+  .analysis-box { background: rgba(67,233,123,0.05); border: 1px solid var(--accent3); padding: 25px; border-radius: 12px; margin-top: 30px; }
+  .btn { 
+    background: var(--accent); color: white; border: none; padding: 15px; 
+    border-radius: 10px; cursor: pointer; font-weight: 800; width: 100%; font-family: 'Syne';
+  }
 </style>
 </head>
 <body>
+
 <div class="container">
   <div class="card">
-    <h2 style="margin-bottom:15px">Gauss (No Fractions) Solver</h2>
-    <div style="display:flex; gap:10px; margin-bottom:20px;">
-      <input type="number" id="rows" value="3" style="width:60px"> <span>×</span> <input type="number" id="cols" value="3" style="width:60px">
-      <button onclick="init()" style="width:auto; padding:5px 15px">Update Grid</button>
+    <h2 style="margin-bottom:15px; color:var(--accent)">1. Input System</h2>
+    <div style="display:flex; gap:15px; align-items:center; margin-bottom:20px;">
+      <label>Equations:</label> <input type="number" id="rows" value="3" class="cell" onchange="initGrid()">
+      <label>Variables:</label> <input type="number" id="cols" value="3" class="cell" onchange="initGrid()">
     </div>
+    
     <div id="grid" class="matrix-grid"></div>
-    <button class="btn" onclick="solve()">RUN CALCULATION</button>
+    
+    <div id="equations" class="eqn-preview">
+      <div style="color:var(--muted); font-size:0.7rem; margin-bottom:5px;">REAL-TIME EQUATIONS:</div>
+      <div id="eqnList"></div>
+    </div>
+
+    <button class="btn" style="margin-top:20px;" onclick="solve()">▶ CALCULATE STEP-BY-STEP</button>
   </div>
+
   <div id="output"></div>
 </div>
 
 <script>
-function init() {
+function initGrid() {
     const r = +document.getElementById('rows').value;
     const c = +document.getElementById('cols').value;
     const g = document.getElementById('grid');
     g.innerHTML = '';
     for(let i=0; i<r; i++) {
-        let row = document.createElement('div');
-        row.className = 'matrix-row';
-        for(let j=0; j<c; j++) row.innerHTML += `<input type
+        let rowDiv = document.createElement('div');
+        rowDiv.className = 'matrix-row';
+        for(let j=0; j<c; j++) {
+            rowDiv.innerHTML += `<input type="number" class="cell" id="v_${i}_${j}" oninput="updateEqns()" onkeydown="moveFocus(event, ${i}, ${j})">`;
+        }
+        rowDiv.innerHTML += `<span style="color:var(--accent); font-weight:bold;">|</span>`;
+        rowDiv.innerHTML += `<input type="number" class="cell" id="b_${i}" oninput="updateEqns()" onkeydown="moveFocus(event, ${i}, ${c})">`;
+        g.appendChild(rowDiv);
+    }
+    updateEqns();
+}
+
+function moveFocus(e, r, c) {
+    let targetRows = +document.getElementById('rows').value;
+    let targetCols = +document.getElementById('cols').value;
+    let next;
+    if(e.key === "ArrowRight") next = document.getElementById(`v_${r}_${c+1}`) || document.getElementById(`b_${r}`);
+    if(e.key === "ArrowLeft")  next = document.getElementById(`v_${r}_${c-1}`);
+    if(e.key === "ArrowDown")  next = document.getElementById(`v_${r+1}_${c}`) || document.getElementById(`b_${r+1}`);
+    if(e.key === "ArrowUp")    next = document.getElementById(`v_${r-1}_${c}`) || document.getElementById(`b_${r-1}`);
+    
+    if(next) { e.preventDefault(); next.focus(); }
+}
+
+function updateEqns() {
+    const r = +document.getElementById('rows').value;
+    const c = +document.getElementById('cols').value;
+    let html = '';
+    for(let i=0; i<r; i++) {
+        let parts = [];
+        for(let j=0; j<c; j++) {
+            let val = document.getElementById(`v_${i}_${j}`).value;
+            if(val) parts.push(`${val}x<sub>${j+1}</sub>`);
+        }
+        let bVal = document.getElementById(`b_${i}`).value || '0';
+        html += `<div>${parts.join(' + ').replace(/\+ -/g, '- ')} = ${bVal}</div>`;
+    }
+    document.getElementById('eqnList').innerHTML = html || 'Waiting for input...';
+}
+
+function solve() {
+    const m = +document.getElementById('rows').value;
+    const n = +document.getElementById('cols').value;
+    let mat = [];
+    for(let i=0; i<m; i++) {
+        let row = [];
+        for(let j=0; j<n; j++) row.push(Number(document.getElementById(`v_${i}_${j}`).value) || 0);
+        row.push(Number(document.getElementById(`b_${i}`).value) || 0);
+        mat.push(row);
+    }
+
+    const out = document.getElementById('output');
+    out.innerHTML = '<h2 style="margin:20px 0;">Solution Steps</h2>';
+
+    let r = 0;
+    for(let c=0; c<n && r<m; c++) {
+        let pivot = r;
+        for(let i=r+1; i<m; i++) if(Math.abs(mat[i][c]) > Math.abs(mat[pivot][c])) pivot = i;
+        if(Math.abs(mat[pivot][c]) < 1e-10) continue;
+
+        if(pivot !== r) {
+            [mat[r], mat[pivot]] = [mat[pivot], mat[r]];
+            addStep(mat, n, `Swap Row ${r+1} with Row ${pivot+1}`, out);
+        }
+
+        for(let i=0; i<m; i++) {
+            if(i !== r && Math.abs(mat[i][c]) > 1e-10) {
+                let pVal = mat[r][c]; // القيمة الأساسية
+                let target = mat[i][c]; // القيمة اللي عايزين نصفرها
+                // R_i = (pVal)*R_i - (target)*R_r -> لضمان أرقام صحيحة
+                for(let j=c; j<=n; j++) mat[i][j] = (pVal * mat[i][j]) - (target * mat[r][j]);
+                addStep(mat, n, `R${i+1} = (${pVal})R${i+1} - (${target})R${r+1}`, out);
+            }
+        }
+        r++;
+    }
+    finalize(mat, m, n, out);
+}
+
+function addStep(mat, n, op, container) {
+    let html = `<div class="step-card"><div class="step-op">${op}</div><table class="mat-table">`;
+    mat.forEach(r => {
+        html += `<tr>`;
+        r.forEach((v, idx) => html += `<td class="${idx===n?'aug-sep':''}">${Math.round(v)}</td>`);
+        html += `</tr>`;
+    });
+    container.innerHTML += html + `</table></div>`;
+}
+
+function finalize(mat, m, n, container) {
+    let rankA = 0, rankAB = 0;
+    for(let i=0; i<m; i++) {
+        let rowA = false, rowAB = false;
+        for(let j=0; j<n; j++) if(Math.abs(mat[i][j]) > 1e-10) rowA = true;
+        for(let j=0; j<=n; j++) if(Math.abs(mat[i][j]) > 1e-10) rowAB = true;
+        if(rowA) rankA++; if(rowAB) rankAB++;
+    }
+
+    let status = (rankA < rankAB) ? "No Solution (Inconsistent)" : (rankA === n ? "Unique Solution" : "Infinite Solutions");
+    
+    let html = `<div class="analysis-box">
+        <h3>Final System Analysis</h3>
+        <p>Rank(A) = <b>${rankA}</b> | Rank(A|B) = <b>${rankAB}</b></p>
+        <p style="color:var(--accent3); margin:10px 0;">Status: <b>${status}</b></p><hr style="opacity:0.1; margin:15px 0;">`;
+
+    if(rankA === rankAB) {
+        for(let i=0; i<n; i++) {
+            let pRow = -1;
+            for(let k=0; k<m; k++) if(Math.abs(mat[k][i]) > 1e-10) { pRow = k; break; }
+            if(pRow !== -1) {
+                let res = mat[pRow][n] / mat[pRow][i];
+                html += `<div style="font-family:'Space Mono'">x<sub>${i+1}</sub> = ${Number.isInteger(res)?res:res.toFixed(2)}</div>`;
+            } else {
+                html += `<div style="color:var(--muted)">x<sub>${i+1}</sub> = Free Parameter</div>`;
+            }
+        }
+    }
+    container.innerHTML += html + `</div>`;
+}
+initGrid();
+</script>
+</body>
+</html>
