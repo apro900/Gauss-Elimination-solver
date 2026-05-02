@@ -4,17 +4,171 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gauss Elimination Solver</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
+        /* الديزاين الأصلي 100% */
         :root {
             --bg: #0a0a0f; --surface: #12121a; --border: #2a2a40;
             --accent: #6c63ff; --accent3: #43e97b; --text: #e8e8f0; --muted: #6b6b8a;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; padding: 40px 20px; }
+        body { 
+            background: var(--bg); color: var(--text); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            padding: 40px 20px; 
+        }
         .container { max-width: 900px; margin: 0 auto; }
         
-        h1 { text-align: center; font-size: 3rem; font-weight: 800; background: linear-gradient(135deg, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 30px; }
+        h1 { 
+            text-align: center; font-size: 3rem; font-weight: 800; 
+            color: #6c63ff; margin-bottom: 30px; 
+            text-transform: uppercase;
+        }
         
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; margin-bottom: 25px; }
-        .setup-row { display: flex
+        .setup-row { display: flex; gap: 20px; justify-content: center; margin-bottom: 25px; }
+        label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 8px; text-transform: uppercase; }
+
+        input.cell {
+            background: #1a1a26; border: 1px solid var(--border); color: white;
+            padding: 12px; border-radius: 10px; width: 75px; text-align: center; outline: none;
+        }
+        
+        .matrix-grid { display: grid; gap: 10px; justify-content: center; margin: 25px 0; overflow-x: auto; }
+        .matrix-row { display: flex; align-items: center; gap: 8px; }
+        .aug-line { width: 2px; height: 35px; background: var(--accent); margin: 0 10px; opacity: 0.5; }
+
+        .btn {
+            background: linear-gradient(135deg, var(--accent), #8a84ff); color: white; border: none;
+            padding: 16px; border-radius: 12px; width: 100%; font-weight: 700; cursor: pointer; font-size: 1.1rem;
+        }
+
+        /* Logic Styles (Arabic Content) */
+        .step-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 20px; padding: 15px; }
+        .step-op { padding: 12px; direction: rtl; text-align: right; color: var(--text); border-right: 4px solid var(--accent); background: rgba(255,255,255,0.02); margin-bottom: 15px; }
+        .mat-table { border-collapse: collapse; margin: 0 auto 10px; font-size: 0.9rem; }
+        .mat-table td { padding: 10px 15px; border: 1px solid var(--border); text-align: center; min-width: 65px; }
+
+        .analysis-panel { border: 2px solid var(--accent3); padding: 25px; border-radius: 16px; background: rgba(67,233,123,0.03); direction: rtl; text-align: right; margin-top: 30px; }
+        .eqn-line { background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px; margin: 8px 0; direction: ltr; text-align: left; border-left: 3px solid var(--accent3); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gauss Elimination Solver</h1>
+    <div class="card">
+        <div class="setup-row">
+            <div><label>Equations (m)</label><input type="number" id="rows" value="3" class="cell" onchange="init()"></div>
+            <div><label>Unknowns (n)</label><input type="number" id="cols" value="3" class="cell" onchange="init()"></div>
+        </div>
+        <div id="grid" class="matrix-grid"></div>
+        <button class="btn" onclick="solve()">RUN CALCULATION</button>
+    </div>
+    <div id="output"></div>
+</div>
+
+<script>
+const defaultVal = [[1, 2, 3, 6], [2, 4, 6, 12], [1, 1, 1, 3]];
+
+function init() {
+    const r = +document.getElementById('rows').value || 3, c = +document.getElementById('cols').value || 3, g = document.getElementById('grid');
+    let h = '';
+    for(let i=0; i<r; i++) {
+        h += '<div class="matrix-row">';
+        for(let j=0; j<c; j++) h += `<input type="number" class="cell" id="v_${i}_${j}" value="${(i<3&&j<3)?defaultVal[i][j]:''}">`;
+        h += '<div class="aug-line"></div>';
+        h += `<input type="number" class="cell" id="b_${i}" value="${(i<3)?defaultVal[i][3]:''}" style="border-color:var(--accent)"></div>`;
+    }
+    g.innerHTML = h;
+}
+
+function solve() {
+    const m = +document.getElementById('rows').value, n = +document.getElementById('cols').value;
+    let mat = [];
+    for(let i=0; i<m; i++) {
+        let row = [];
+        for(let j=0; j<n; j++) row.push(+document.getElementById(`v_${i}_${j}`).value || 0);
+        row.push(+document.getElementById(`b_${i}`).value || 0);
+        mat.push(row);
+    }
+    const out = document.getElementById('output');
+    let stepsHTML = '';
+    let r = 0;
+    for(let c=0; c<n && r<m; c++) {
+        let pivot = r;
+        while(pivot < m && Math.abs(mat[pivot][c]) < 1e-10) pivot++;
+        if(pivot === m) continue;
+        if(pivot !== r) {
+            [mat[r], mat[pivot]] = [mat[pivot], mat[r]];
+            stepsHTML += render(mat, n, `تبديل الصفوف: R${r+1} ↔ R${pivot+1}`);
+        }
+        for(let i=r+1; i<m; i++) {
+            if(Math.abs(mat[i][c]) > 1e-10) {
+                let v1 = mat[r][c], v2 = mat[i][c];
+                for(let j=c; j<=n; j++) mat[i][j] = (v1 * mat[i][j]) - (v2 * mat[r][j]);
+                stepsHTML += render(mat, n, `تصفير المجهول x${c+1}: R${i+1} = (${v1})R${i+1} - (${v2})R${r+1}`);
+            }
+        }
+        r++;
+    }
+    out.innerHTML = stepsHTML;
+    finalize(mat, m, n, out);
+}
+
+function render(mat, n, op) {
+    let t = '<table class="mat-table">';
+    mat.forEach(row => {
+        t += '<tr>';
+        row.forEach((v, idx) => t += `<td style="${idx===n?'border-left:2px solid var(--accent)':''}">${Number.isInteger(v)?v:v.toFixed(1)}</td>`);
+        t += '</tr>';
+    });
+    return `<div class="step-card"><div class="step-op">${op}</div>${t}</table></div>`;
+}
+
+function finalize(mat, m, n, out) {
+    let rA = 0, rAB = 0, pivs = [];
+    for(let i=0; i<m; i++) {
+        let fA = false, fAB = false;
+        for(let j=0; j<n; j++) if(Math.abs(mat[i][j])>1e-10) { if(!fA) pivs.push(j); fA=true; }
+        for(let j=0; j<=n; j++) if(Math.abs(mat[i][j])>1e-10) fAB=true;
+        if(fA) rA++; if(fAB) rAB++;
+    }
+    let h = `<div class="analysis-panel"><h2>الاستنتاج النهائي:</h2><p>n = ${n} | r = ${rA} | Rank(A|B) = ${rAB}</p>`;
+    if(rA < rAB) h += `<p style="color:var(--accent2)">No Solution.</p>`;
+    else if(rA === n) h += `<p style="color:var(--accent3)">Unique Solution:</p>` + back(mat, rA, n, pivs);
+    else h += `<p style="color:var(--accent3)">Infinite Solutions. عدد الثوابت = ${n-rA}</p>` + inf(mat, rA, n, pivs);
+    out.innerHTML += h + '</div>';
+}
+
+function back(mat, r, n, pivs) {
+    let s = new Array(n).fill(0), res = "";
+    for(let i=r-1; i>=0; i--) {
+        let p = pivs[i], sum = mat[i][n];
+        for(let j=p+1; j<n; j++) sum -= mat[i][j] * s[j];
+        s[p] = sum / mat[i][p];
+        res += `<div class="eqn-line">x${p+1} = ${s[p].toFixed(2)}</div>`;
+    }
+    return res;
+}
+
+function inf(mat, r, n, pivs) {
+    let free = []; for(let j=0; j<n; j++) if(!pivs.includes(j)) free.push(j);
+    let sym = ['s','t','k'], m = {}, h = "<b>1. فرض المتغيرات الحرة:</b>";
+    free.forEach((c, idx) => { m[c] = sym[idx%3]; h += `<div class="eqn-line">x${c+1} = ${m[c]}</div>`; });
+    h += "<br><b>2. المعادلات النهائية:</b>";
+    for(let i=r-1; i>=0; i--) {
+        let p = pivs[i], rhs = `${mat[i][n]}`;
+        for(let j=p+1; j<n; j++) {
+            if(Math.abs(mat[i][j])>1e-10) {
+                let v = mat[i][j], t = m[j] || `x${j+1}`;
+                rhs += (v>0) ? ` - (${v})${t}` : ` + (${Math.abs(v)})${t}`;
+            }
+        }
+        h += `<div class="eqn-line">x${p+1} = [ ${rhs} ] / ${mat[i][p]}</div>`;
+    }
+    return h;
+}
+init();
+</script>
+</body>
+</html>
