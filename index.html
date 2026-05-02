@@ -1,83 +1,97 @@
 function solve() {
   const m = M_rows, n = M_cols;
   const out = document.getElementById('output');
-  out.innerHTML = '';
-  out.style.display = 'block';
 
-  // 🔥 قراءة المصفوفة مرة واحدة (سريع)
-  let M = new Array(m);
+  // قراءة سريعة
+  let M = [];
   for (let i = 0; i < m; i++) {
-    M[i] = new Float64Array(n + 1);
+    M[i] = [];
     for (let j = 0; j < n; j++) {
       M[i][j] = +document.getElementById(`m_${i}_${j}`).value || 0;
     }
     M[i][n] = +document.getElementById(`b_${i}`).value || 0;
   }
 
-  // عرض المعادلات
-  out.innerHTML += showEquations();
+  // Gaussian (خفيف جدًا)
+  let r = 0;
+  for (let c = 0; c < n && r < m; c++) {
 
-  // 🔥 Gaussian سريع
-  let row = 0;
-  for (let col = 0; col < n && row < m; col++) {
-
-    // pivot
-    let sel = row;
-    for (let i = row + 1; i < m; i++) {
-      if (Math.abs(M[i][col]) > Math.abs(M[sel][col])) sel = i;
+    let piv = r;
+    for (let i = r; i < m; i++) {
+      if (Math.abs(M[i][c]) > Math.abs(M[piv][c])) piv = i;
     }
 
-    if (Math.abs(M[sel][col]) < EPS) continue;
+    if (Math.abs(M[piv][c]) < 1e-9) continue;
 
-    // swap
-    if (sel !== row) {
-      let tmp = M[sel];
-      M[sel] = M[row];
-      M[row] = tmp;
-    }
+    [M[r], M[piv]] = [M[piv], M[r]];
 
-    // eliminate
-    for (let i = row + 1; i < m; i++) {
-      let factor = M[i][col] / M[row][col];
-      if (Math.abs(factor) < EPS) continue;
-
-      for (let j = col; j <= n; j++) {
-        M[i][j] -= factor * M[row][j];
+    for (let i = r + 1; i < m; i++) {
+      let f = M[i][c] / M[r][c];
+      for (let j = c; j <= n; j++) {
+        M[i][j] -= f * M[r][j];
       }
     }
 
-    row++;
+    r++;
   }
 
-  // 🔥 rank سريع
+  // rank
   let rankA = 0, rankAug = 0;
 
   for (let i = 0; i < m; i++) {
-    let allZero = true;
+    let zero = true;
 
     for (let j = 0; j < n; j++) {
-      if (Math.abs(M[i][j]) > EPS) {
-        allZero = false;
+      if (Math.abs(M[i][j]) > 1e-9) {
+        zero = false;
         break;
       }
     }
 
-    if (!allZero) {
+    if (!zero) {
       rankA++;
       rankAug++;
-    } else if (Math.abs(M[i][n]) > EPS) {
+    } else if (Math.abs(M[i][n]) > 1e-9) {
       rankAug++;
     }
   }
 
-  // 🔥 تحديد النوع بسرعة
+  // نوع الحل
   let type;
   if (rankA !== rankAug) type = "No Solution";
   else if (rankA === n) type = "Unique Solution";
   else type = "Infinite Solutions";
 
-  // 🔥 output مرة واحدة (أسرع)
-  let html = `
+  // حل وحيد
+  let solText = "";
+  if (type === "Unique Solution") {
+    let x = new Array(n).fill(0);
+
+    for (let i = rankA - 1; i >= 0; i--) {
+      let pc = -1;
+
+      for (let j = 0; j < n; j++) {
+        if (Math.abs(M[i][j]) > 1e-9) {
+          pc = j;
+          break;
+        }
+      }
+
+      let sum = M[i][n];
+      for (let j = pc + 1; j < n; j++) {
+        sum -= M[i][j] * x[j];
+      }
+
+      x[pc] = sum / M[i][pc];
+    }
+
+    for (let i = 0; i < n; i++) {
+      solText += `<div class="sol-line">x${i+1} = ${x[i].toFixed(3)}</div>`;
+    }
+  }
+
+  // عرض خفيف جدًا
+  out.innerHTML = `
   <div class="step-card">
     <div class="step-header result">Result</div>
     <div class="step-body">
@@ -91,45 +105,14 @@ function solve() {
       <div class="result-box">
         <div class="sol-line">${type}</div>
       </div>
+
+      ${solText}
+
+      ${type === "Infinite Solutions" ? `<div class="sol-line">Free variables = ${n - rankA}</div>` : ""}
+
+    </div>
+  </div>
   `;
 
-  // unique solution
-  if (type === "Unique Solution") {
-    let sol = new Float64Array(n);
-
-    for (let i = rankA - 1; i >= 0; i--) {
-      let pivotCol = -1;
-
-      for (let j = 0; j < n; j++) {
-        if (Math.abs(M[i][j]) > EPS) {
-          pivotCol = j;
-          break;
-        }
-      }
-
-      let sum = M[i][n];
-      for (let j = pivotCol + 1; j < n; j++) {
-        sum -= M[i][j] * sol[j];
-      }
-
-      sol[pivotCol] = sum / M[i][pivotCol];
-    }
-
-    html += `<div class="result-box">`;
-    for (let i = 0; i < n; i++) {
-      html += `<div class="sol-line">x${i+1} = ${fmt(sol[i])}</div>`;
-    }
-    html += `</div>`;
-  }
-
-  // infinite
-  if (type === "Infinite Solutions") {
-    html += `<div class="result-box">
-      <div class="sol-line">Free variables = ${n - rankA}</div>
-    </div>`;
-  }
-
-  html += `</div></div>`;
-
-  out.innerHTML += html;
+  out.style.display = "block";
 }
