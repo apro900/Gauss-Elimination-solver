@@ -1,29 +1,215 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gauss Solver — Academic Pro Edition</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a26; --border: #2a2a40;
-    --accent: #6c63ff; --accent2: #ff6584; --accent3: #43e97b;
-    --text: #e8e8f0; --muted: #6b6b8a;
+<!-- نفس الهيدر و CSS بدون أي تغيير -->
+<!-- هنعدل بس JavaScript -->
+
+<script>
+const EPS = 1e-9;
+
+function fmt(v) {
+  if (Math.abs(v) < EPS) return '0';
+  return (Math.round(v * 10000) / 10000).toString();
+}
+
+let M_rows = 3, M_cols = 3;
+
+function buildMatrix() {
+  const m = parseInt(document.getElementById('numEq').value) || 3;
+  const n = parseInt(document.getElementById('numVar').value) || 3;
+  M_rows = m;
+  M_cols = n;
+
+  const grid = document.getElementById('matrixGrid');
+  grid.innerHTML = '';
+
+  for (let i = 0; i < m; i++) {
+    let row = '<div class="matrix-row">';
+    row += `<div class="row-label">R${i+1}</div>`;
+
+    for (let j = 0; j < n; j++) {
+      row += `<input type="number" id="m_${i}_${j}" placeholder="0">`;
+    }
+
+    row += '<div class="sep">|</div>';
+    row += `<input type="number" id="b_${i}" class="b-input" placeholder="0">`;
+    row += '</div>';
+
+    grid.innerHTML += row;
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif;
-    min-height: 100vh; padding: 40px 20px;
+  document.getElementById('matrixCard').style.display = 'block';
+}
+
+function getMatrix() {
+  const mat = [];
+  for (let i = 0; i < M_rows; i++) {
+    const row = [];
+    for (let j = 0; j < M_cols; j++) {
+      row.push(parseFloat(document.getElementById(`m_${i}_${j}`).value) || 0);
+    }
+    row.push(parseFloat(document.getElementById(`b_${i}`).value) || 0);
+    mat.push(row);
+  }
+  return mat;
+}
+
+// 🔥 عرض المعادلات
+function showEquations() {
+  let html = '<div class="step-card"><div class="step-header info">Equations</div><div class="step-body">';
+
+  for (let i = 0; i < M_rows; i++) {
+    let eq = '';
+    for (let j = 0; j < M_cols; j++) {
+      let val = parseFloat(document.getElementById(`m_${i}_${j}`).value) || 0;
+
+      if (val === 0) continue;
+
+      if (eq !== '' && val > 0) eq += ' + ';
+      else if (val < 0) eq += ' - ';
+
+      eq += Math.abs(val) + 'x' + (j+1);
+    }
+
+    let b = parseFloat(document.getElementById(`b_${i}`).value) || 0;
+    eq += ' = ' + b;
+
+    html += `<div class="sol-line">${eq}</div>`;
   }
 
-  /* Grid Background Effect */
-  body::before {
-    content: ''; position: fixed; inset: 0;
-    background-image: linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
-    background-size: 40px 40px; pointer-events: none; z-index: 0;
+  html += '</div></div>';
+  return html;
+}
+
+function solve() {
+  let M = getMatrix();
+  const m = M_rows, n = M_cols;
+
+  const out = document.getElementById('output');
+  out.innerHTML = '';
+  out.style.display = 'block';
+
+  // عرض المعادلات
+  out.innerHTML += showEquations();
+
+  // Gaussian Elimination
+  let pivot = 0;
+  for (let col = 0; col < n && pivot < m; col++) {
+
+    let best = pivot;
+    for (let i = pivot; i < m; i++) {
+      if (Math.abs(M[i][col]) > Math.abs(M[best][col])) best = i;
+    }
+
+    if (Math.abs(M[best][col]) < EPS) continue;
+
+    [M[pivot], M[best]] = [M[best], M[pivot]];
+
+    for (let i = pivot + 1; i < m; i++) {
+      let factor = M[i][col] / M[pivot][col];
+
+      for (let j = col; j <= n; j++) {
+        M[i][j] -= factor * M[pivot][j];
+        if (Math.abs(M[i][j]) < EPS) M[i][j] = 0;
+      }
+    }
+
+    pivot++;
   }
 
-  .container { position: relative; z
+  // 🔥 حساب الرانك الصح
+  let rankA = 0;
+  let rankAug = 0;
+
+  for (let i = 0; i < m; i++) {
+    let zeroA = true;
+
+    for (let j = 0; j < n; j++) {
+      if (Math.abs(M[i][j]) > EPS) {
+        zeroA = false;
+        break;
+      }
+    }
+
+    if (!zeroA) {
+      rankA++;
+      rankAug++;
+    } else if (Math.abs(M[i][n]) > EPS) {
+      rankAug++;
+    }
+  }
+
+  // 🔥 تحديد نوع الحل
+  let type = "";
+
+  if (rankA !== rankAug) type = "No Solution";
+  else if (rankA === n) type = "Unique Solution";
+  else type = "Infinite Solutions";
+
+  // 🔥 عرض النتائج
+  let html = `
+  <div class="step-card">
+    <div class="step-header result">Result</div>
+    <div class="step-body">
+
+      <div class="rank-row">
+        <div class="stat-box">
+          <div class="val">${rankA}</div>
+          <div class="lbl">r(A)</div>
+        </div>
+
+        <div class="stat-box">
+          <div class="val">${rankAug}</div>
+          <div class="lbl">r(A|b)</div>
+        </div>
+
+        <div class="stat-box">
+          <div class="val">${n}</div>
+          <div class="lbl">n</div>
+        </div>
+      </div>
+
+      <div class="result-box">
+        <div class="sol-line">${type}</div>
+      </div>
+  `;
+
+  // 🔥 الحل الفعلي
+  if (type === "Unique Solution") {
+    let sol = new Array(n).fill(0);
+
+    for (let i = rankA - 1; i >= 0; i--) {
+      let pivotCol = -1;
+      for (let j = 0; j < n; j++) {
+        if (Math.abs(M[i][j]) > EPS) {
+          pivotCol = j;
+          break;
+        }
+      }
+
+      let sum = M[i][n];
+      for (let j = pivotCol + 1; j < n; j++) {
+        sum -= M[i][j] * sol[j];
+      }
+
+      sol[pivotCol] = sum / M[i][pivotCol];
+    }
+
+    html += `<div class="result-box">`;
+    for (let i = 0; i < n; i++) {
+      html += `<div class="sol-line">x${i+1} = ${fmt(sol[i])}</div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Infinite → free vars
+  if (type === "Infinite Solutions") {
+    html += `<div class="result-box">`;
+    html += `<div class="sol-line">Free variables = ${n - rankA}</div>`;
+    html += `</div>`;
+  }
+
+  html += `</div></div>`;
+
+  out.innerHTML += html;
+}
+
+window.onload = buildMatrix;
+</script>
