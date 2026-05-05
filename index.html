@@ -1,171 +1,1357 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <title>Gauss Solver - Smart Engine</title>
-    <style>
-        :root { --bg: #0a0a0f; --card: #12121a; --acc: #6c63ff; --txt: #e8e8f0; --brd: #2a2a40; --pivot: #ffd166; }
-        body { background: var(--bg); color: var(--txt); font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; line-height: 1.6; }
-        .container { max-width: 850px; margin: auto; }
-        .card { background: var(--card); border: 1px solid var(--brd); border-radius: 15px; padding: 25px; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h1 { font-size: 2.2rem; background: linear-gradient(to right, #fff, var(--acc)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; margin-bottom: 5px; }
-        .grid-inputs { display: grid; gap: 10px; margin: 20px 0; overflow-x: auto; }
-        .row-inputs { display: flex; gap: 8px; align-items: center; min-width: max-content; }
-        input { background: #1a1a26; border: 1px solid var(--brd); color: #fff; padding: 10px; border-radius: 8px; width: 60px; text-align: center; font-weight: bold; outline: none; transition: 0.3s; }
-        input:focus { border-color: var(--acc); background: #222233; }
-        .btn { background: var(--acc); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; transition: 0.3s; margin-top: 10px; }
-        .btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
-        .step { border-left: 4px solid var(--acc); background: rgba(108,99,255,0.03); padding: 20px; margin-top: 15px; border-radius: 0 12px 12px 0; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .op-tag { font-family: 'Courier New', monospace; color: var(--pivot); font-size: 0.95rem; margin-bottom: 10px; display: block; }
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-        td { border: 1px solid var(--brd); padding: 12px; text-align: center; font-family: 'Consolas', monospace; font-size: 1rem; }
-        .analysis { border: 1px solid #22c55e; background: rgba(34, 197, 94, 0.05); padding: 20px; border-radius: 12px; margin-top: 25px; }
-        .sol-line { font-size: 1.1rem; color: #22c55e; font-weight: bold; margin: 10px 0; font-family: 'Consolas', monospace; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حل جاوس - Gauss Elimination</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Cairo:wght@400;600;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c14;
+    --surface: #111520;
+    --surface2: #161b2e;
+    --border: #1e2640;
+    --accent: #4f8ef7;
+    --accent2: #7c3aed;
+    --green: #22d3a0;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Cairo', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background-image:
+      linear-gradient(rgba(79,142,247,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,142,247,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .container {
+    position:relative;
+    z-index:1;
+    max-width:1000px;
+    margin:0 auto;
+    padding:2rem 1.5rem 4rem;
+  }
+
+  /* HEADER */
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+  header {
+    text-align:center;
+    margin-bottom:3rem;
+    padding-top:1rem;
+  }
+  header .tag {
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:.68rem;
+    letter-spacing:.22em;
+    color:var(--accent);
+    border:1px solid rgba(79,142,247,.25);
+    padding:.3rem 1rem;
+    border-radius:30px;
+    margin-bottom:1.2rem;
+    text-transform:uppercase;
+    background:rgba(79,142,247,.05);
+  }
+  header h1 {
+    font-family:'Bebas Neue', 'Arial Black', sans-serif;
+    font-size:clamp(3.5rem, 12vw, 7.5rem);
+    font-weight:400;
+    line-height:.95;
+    letter-spacing:.02em;
+    background: linear-gradient(135deg, #fff 0%, #e8b4f8 40%, #a78bfa 70%, #60a5fa 100%);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+    margin-bottom:1rem;
+    text-transform:uppercase;
+    filter: drop-shadow(0 0 40px rgba(124,58,237,.3));
+  }
+  header p {
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:.72rem;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .card-title {
+    font-family: var(--mono);
+    font-size: .7rem;
+    letter-spacing: .12em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .card-title::before {
+    content:'';
+    width:3px;
+    height:14px;
+    background:var(--accent);
+    border-radius:2px;
+  }
+
+  /* CONTROLS */
+  .controls-row {
+    display:flex;
+    gap:1rem;
+    align-items:flex-end;
+    flex-wrap:wrap;
+  }
+  .control-group {
+    display:flex;
+    flex-direction:column;
+    gap:.4rem;
+  }
+  .control-group label {
+    font-size:.75rem;
+    color:var(--muted);
+    font-family:var(--mono);
+  }
+  .control-group input[type=number] {
+    width:80px;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:6px;
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:1rem;
+    padding:.5rem .6rem;
+    text-align:center;
+    transition:border-color .2s;
+    outline:none;
+  }
+  .control-group input[type=number]:focus {
+    border-color:var(--accent);
+  }
+
+  /* BUTTONS */
+  .btn {
+    padding:.55rem 1.2rem;
+    border-radius:6px;
+    border:none;
+    cursor:pointer;
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:.85rem;
+    transition:all .2s;
+    outline:none;
+  }
+  .btn-primary {
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;
+  }
+  .btn-primary:hover { opacity:.88; transform:translateY(-1px); }
+  .btn-ghost {
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--muted);
+  }
+  .btn-ghost:hover { border-color:var(--accent); color:var(--accent); }
+  .btn-green {
+    background:linear-gradient(135deg,#059669,#22d3a0);
+    color:#fff;
+  }
+  .btn-green:hover { opacity:.88; transform:translateY(-1px); }
+
+  /* MATRIX INPUT */
+  .matrix-wrap {
+    overflow-x:auto;
+    padding-bottom:.5rem;
+  }
+  .matrix-grid {
+    display:inline-grid;
+    gap:6px;
+    direction:ltr;
+  }
+  .matrix-cell {
+    width:64px;
+    height:44px;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:6px;
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:.95rem;
+    text-align:center;
+    transition:border-color .2s, box-shadow .2s, background .2s;
+    outline:none;
+  }
+  .matrix-cell:focus {
+    border-color:var(--accent);
+    box-shadow:0 0 0 2px rgba(79,142,247,.2);
+    background:var(--surface);
+  }
+  .matrix-cell.aug-col {
+    border-color:rgba(124,58,237,.4);
+  }
+  .matrix-cell.aug-col:focus {
+    border-color:var(--accent2);
+    box-shadow:0 0 0 2px rgba(124,58,237,.2);
+  }
+  .matrix-labels {
+    display:inline-grid;
+    gap:6px;
+    direction:ltr;
+    margin-bottom:4px;
+  }
+  .col-label {
+    width:64px;
+    text-align:center;
+    font-family:var(--mono);
+    font-size:.65rem;
+    color:var(--muted);
+  }
+  .aug-divider {
+    width:2px;
+    background:rgba(124,58,237,.4);
+    border-radius:2px;
+    align-self:stretch;
+  }
+  .matrix-outer {
+    display:flex;
+    align-items:flex-start;
+    gap:4px;
+  }
+  .bracket {
+    font-size:3rem;
+    color:var(--border);
+    line-height:1;
+    user-select:none;
+    padding-top:2px;
+  }
+
+  /* STEPS */
+  .steps-container { display:flex; flex-direction:column; gap:1rem; }
+  .step-block {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    animation: fadeIn .35s ease both;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+
+  .step-header {
+    display:flex;
+    align-items:center;
+    gap:.8rem;
+    padding:.75rem 1rem;
+    background:rgba(255,255,255,.02);
+    border-bottom:1px solid var(--border);
+  }
+  .step-num {
+    font-family:var(--mono);
+    font-size:.65rem;
+    color:var(--accent);
+    background:rgba(79,142,247,.1);
+    border:1px solid rgba(79,142,247,.2);
+    border-radius:4px;
+    padding:.15rem .45rem;
+    letter-spacing:.08em;
+    white-space:nowrap;
+  }
+  .step-op {
+    font-family:var(--mono);
+    font-size:.82rem;
+    color:var(--green);
+    direction:ltr;
+  }
+  .step-desc {
+    font-size:.8rem;
+    color:var(--muted);
+    margin-right:auto;
+  }
+  .step-matrix-wrap { padding:1rem; overflow-x:auto; }
+  .step-matrix {
+    border-collapse:collapse;
+    direction:ltr;
+    font-family:var(--mono);
+    font-size:.88rem;
+  }
+  .step-matrix td {
+    padding:.3rem .6rem;
+    text-align:center;
+    min-width:50px;
+    color:var(--text);
+  }
+  .step-matrix td.pivot { color:var(--green); font-weight:600; }
+  .step-matrix td.changed { color:var(--orange); }
+  .step-matrix td.zero { color:var(--muted); }
+  .step-matrix td.aug { border-right:none; padding-left:1rem; }
+  .step-matrix td.aug-val { padding-left:1rem; color:var(--accent2); }
+  .step-matrix .row-lbl {
+    color:var(--muted);
+    font-size:.7rem;
+    padding-right:.8rem;
+    white-space:nowrap;
+  }
+  .aug-line td { border-left:2px solid rgba(124,58,237,.4); }
+
+  /* RESULT */
+  .result-card {
+    background:var(--surface);
+    border-radius:12px;
+    overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .result-type-banner {
+    padding:1rem 1.5rem;
+    font-family:var(--mono);
+    font-size:.8rem;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    display:flex;
+    align-items:center;
+    gap:.8rem;
+  }
+  .result-type-banner.unique { background:rgba(34,211,160,.08); color:var(--green); border-bottom:1px solid rgba(34,211,160,.2); }
+  .result-type-banner.infinite { background:rgba(79,142,247,.08); color:var(--accent); border-bottom:1px solid rgba(79,142,247,.2); }
+  .result-type-banner.none { background:rgba(239,68,68,.08); color:var(--red); border-bottom:1px solid rgba(239,68,68,.2); }
+
+  .result-body { padding:1.5rem; }
+  .rank-row {
+    display:flex;
+    gap:1.5rem;
+    flex-wrap:wrap;
+    margin-bottom:1.2rem;
+    font-family:var(--mono);
+    font-size:.85rem;
+  }
+  .rank-badge {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:.4rem .8rem;
+    display:flex;
+    gap:.5rem;
+    align-items:center;
+  }
+  .rank-badge .label { color:var(--muted); font-size:.72rem; }
+  .rank-badge .val { color:var(--text); font-weight:600; }
+
+  .solution-vars {
+    display:flex;
+    flex-direction:column;
+    gap:.6rem;
+    font-family:var(--mono);
+    font-size:.9rem;
+    direction:ltr;
+  }
+  .var-line {
+    display:flex;
+    align-items:center;
+    gap:.6rem;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:.5rem .8rem;
+  }
+  .var-name { color:var(--accent2); font-weight:600; min-width:28px; }
+  .var-eq { color:var(--muted); }
+  .var-val { color:var(--green); }
+
+  .conclusion {
+    margin-top:1rem;
+    font-size:.82rem;
+    color:var(--muted);
+    line-height:1.7;
+    background:var(--surface2);
+    border-radius:6px;
+    padding:.8rem 1rem;
+    border-right:3px solid var(--accent);
+    font-family:var(--sans);
+  }
+
+  /* FRACTION DISPLAY */
+  .frac {
+    display:inline-flex;
+    flex-direction:column;
+    align-items:center;
+    vertical-align:middle;
+    font-size:.75rem;
+    line-height:1.1;
+    margin:0 .1rem;
+  }
+  .frac span:first-child { border-bottom:1px solid currentColor; padding:0 2px; }
+
+  /* MISC */
+  .divider-label {
+    text-align:center;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:.65rem;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    margin:.5rem 0;
+    display:flex;
+    align-items:center;
+    gap:.5rem;
+  }
+  .divider-label::before,.divider-label::after {
+    content:'';flex:1;height:1px;background:var(--border);
+  }
+
+  .hidden { display:none !important; }
+
+  /* GLOW DOT */
+  .dot {
+    width:8px; height:8px; border-radius:50%;
+    display:inline-block; flex-shrink:0;
+  }
+  .dot.green { background:var(--green); box-shadow:0 0 8px var(--green); }
+  .dot.blue  { background:var(--accent); box-shadow:0 0 8px var(--accent); }
+  .dot.red   { background:var(--red); box-shadow:0 0 8px var(--red); }
+
+  /* CHART */
+  canvas#chart { display:block; max-width:100%; }
+  .chart-container {
+    background:var(--surface2);
+    border-radius:8px;
+    padding:1rem;
+    direction:ltr;
+    overflow:hidden;
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:4px; }
+
+  @media(max-width:600px){
+    .controls-row { gap:.7rem; }
+    .matrix-cell { width:52px; height:38px; font-size:.82rem; }
+    .col-label { width:52px; }
+  }
+</style>
 </head>
 <body>
-
 <div class="container">
-    <div class="card">
-        <h1>Gauss Elimination Solver</h1>
-        <p style="text-align:center; color:var(--acc); font-size:0.8rem; letter-spacing:2px;">// STEP-BY-STEP ROW REDUCTION</p>
-        
-        <div style="display:flex; gap:10px; justify-content: center; margin: 20px 0;">
-            <input type="number" id="rows" value="3" title="Rows">
-            <input type="number" id="cols" value="3" title="Cols">
-            <button class="btn" style="width:auto; padding: 0 25px;" onclick="initGrid()">Reset Grid</button>
-        </div>
 
-        <div id="matrix-input" class="grid-inputs"></div>
-        <button class="btn" onclick="solve()">Solve & Show Detailed Steps</button>
+  <header>
+    <div class="tag">Linear Algebra</div>
+    <h1>Gauss<br>Elimination<br>Solver</h1>
+    <p>// Step-by-step row reduction engine</p>
+  </header>
+
+  <!-- STEP 1: DIMENSIONS -->
+  <div class="card" id="card-dims">
+    <div class="card-title">الأبعاد</div>
+    <div class="controls-row">
+      <div class="control-group">
+        <label>عدد المعادلات (m)</label>
+        <input type="number" id="inp-m" min="1" max="8" value="3">
+      </div>
+      <div class="control-group">
+        <label>عدد المجاهيل (n)</label>
+        <input type="number" id="inp-n" min="1" max="8" value="3">
+      </div>
+      <button class="btn btn-primary" onclick="buildMatrix()">بناء المصفوفة ▸</button>
     </div>
-    <div id="steps-output"></div>
+  </div>
+
+  <!-- STEP 2: MATRIX INPUT -->
+  <div class="card hidden" id="card-matrix">
+    <div class="card-title">أدخل المعاملات</div>
+    <div class="matrix-outer" id="matrix-outer">
+      <div class="bracket">[</div>
+      <div>
+        <div class="matrix-labels" id="matrix-labels"></div>
+        <div class="matrix-wrap">
+          <div class="matrix-grid" id="matrix-grid"></div>
+        </div>
+      </div>
+      <div class="bracket">]</div>
+    </div>
+    <div style="margin-top:1rem;display:flex;gap:.8rem;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="solve()">حل ▸</button>
+      <button class="btn btn-ghost" onclick="clearMatrix()">مسح</button>
+      <button class="btn btn-ghost" onclick="loadExample()">مثال</button>
+    </div>
+  </div>
+
+  <!-- STEPS OUTPUT -->
+  <div class="card hidden" id="card-steps">
+    <div class="card-title">الخطوات</div>
+    <div class="steps-container" id="steps-container"></div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="hidden" id="card-result">
+    <div class="result-card">
+      <div class="result-type-banner" id="result-banner">
+        <span class="dot" id="result-dot"></span>
+        <span id="result-type-text"></span>
+      </div>
+      <div class="result-body">
+        <div class="rank-row" id="rank-row"></div>
+        <div id="solution-area"></div>
+        <div class="conclusion" id="conclusion-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="card hidden" id="card-chart">
+    <div class="card-title">رسم المعادلات</div>
+    <div class="chart-container">
+      <canvas id="chart" height="320"></canvas>
+    </div>
+  </div>
+
 </div>
 
 <script>
-// Default problem from your image
-const defaultMatrix = [
-    [2, -1, 3, 0],
-    [3, 2, 1, 0],
-    [1, -4, 5, 0]
-];
+// ==================== FRACTION ARITHMETIC ====================
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){let t=b;b=a%b;a=t;}return a||1;}
+function frac(n,d=1){
+  if(d===0) return {n:0,d:1}; // shouldn't happen
+  if(n===0) return {n:0,d:1};
+  let g=gcd(Math.abs(n),Math.abs(d));
+  n=n/g; d=d/g;
+  if(d<0){n=-n;d=-d;}
+  return {n,d};
+}
+function fadd(a,b){return frac(a.n*b.d+b.n*a.d, a.d*b.d);}
+function fsub(a,b){return frac(a.n*b.d-b.n*a.d, a.d*b.d);}
+function fmul(a,b){return frac(a.n*b.n, a.d*b.d);}
+function fdiv(a,b){return frac(a.n*b.d, a.d*b.n);}
+function feq(a,b){return a.n===b.n&&a.d===b.d;}
+function fisZero(a){return a.n===0;}
+function fisOne(a){return a.n===a.d;}
+function fnum(x){
+  // convert number to fraction (handle floats carefully)
+  if(Number.isInteger(x)) return frac(x,1);
+  let str=x.toString();
+  let dec=str.indexOf('.');
+  if(dec<0) return frac(x,1);
+  let decimals=str.length-dec-1;
+  let d=Math.pow(10,decimals);
+  return frac(Math.round(x*d),d);
+}
+function fstr(f){
+  if(f.d===1) return String(f.n);
+  return `${f.n}/${f.d}`;
+}
+function fval(f){return f.n/f.d;}
 
-function initGrid() {
-    const R = +document.getElementById('rows').value, C = +document.getElementById('cols').value;
-    const container = document.getElementById('matrix-input');
-    container.innerHTML = '';
-    for(let i=0; i<R; i++) {
-        let div = document.createElement('div'); div.className='row-inputs';
-        for(let j=0; j<C; j++) {
-            let val = (defaultMatrix[i] && defaultMatrix[i][j] !== undefined) ? defaultMatrix[i][j] : 0;
-            div.innerHTML += `<input id="v${i}_${j}" value="${val}">`;
-        }
-        let bVal = (defaultMatrix[i] && defaultMatrix[i][C] !== undefined) ? defaultMatrix[i][C] : 0;
-        div.innerHTML += `<b style="color:var(--acc)">|</b><input id="b${i}" value="${bVal}" style="border-color:var(--acc)">`;
-        container.appendChild(div);
+// ==================== STATE ====================
+let M=3, N=3; // rows, unknowns
+// cells[r][c] = input element (c: 0..N-1 are coefficients, N is augmented b)
+
+// ==================== BUILD MATRIX ====================
+function buildMatrix(){
+  M=Math.max(1,Math.min(8,parseInt(document.getElementById('inp-m').value)||3));
+  N=Math.max(1,Math.min(8,parseInt(document.getElementById('inp-n').value)||3));
+
+  document.getElementById('inp-m').value=M;
+  document.getElementById('inp-n').value=N;
+
+  const grid=document.getElementById('matrix-grid');
+  const labels=document.getElementById('matrix-labels');
+  grid.innerHTML='';
+  labels.innerHTML='';
+
+  // Total cols = N (x1..xN) + 1 (b)
+  const totalCols=N+1;
+  grid.style.gridTemplateColumns=`repeat(${totalCols},auto) 4px repeat(1,auto)`.replace('4px repeat(1,auto)','');
+  // Actually just N+1 cols with a visual gap before last
+  grid.style.gridTemplateColumns=`repeat(${N},auto) 8px auto`;
+
+  // Labels row
+  labels.style.gridTemplateColumns=`repeat(${N},auto) 8px auto`;
+  for(let c=0;c<N;c++){
+    let lb=document.createElement('div');
+    lb.className='col-label';
+    lb.textContent=`x${subscript(c+1)}`;
+    labels.appendChild(lb);
+  }
+  let sp=document.createElement('div'); sp.style.width='8px'; labels.appendChild(sp);
+  let blb=document.createElement('div'); blb.className='col-label'; blb.style.color='var(--accent2)'; blb.textContent='b'; labels.appendChild(blb);
+
+  // Cells
+  for(let r=0;r<M;r++){
+    for(let c=0;c<N;c++){
+      let inp=makeCell(r,c,false);
+      grid.appendChild(inp);
     }
+    // gap spacer
+    let sp=document.createElement('div'); sp.style.width='8px'; grid.appendChild(sp);
+    // augmented col
+    let inp=makeCell(r,N,true);
+    grid.appendChild(inp);
+  }
+
+  document.getElementById('card-matrix').classList.remove('hidden');
+  document.getElementById('card-steps').classList.add('hidden');
+  document.getElementById('card-result').classList.add('hidden');
+  document.getElementById('card-chart').classList.add('hidden');
+  document.getElementById('steps-container').innerHTML='';
 }
 
-function toF(n) {
-    if (Math.abs(n) < 1e-9) return "0";
-    if (Number.isInteger(n)) return n.toString();
-    const gcd = (a, b) => b ? gcd(b, a % b) : a;
-    let d = 10000, num = Math.round(n * d);
-    let common = Math.abs(gcd(num, d));
-    return (num/common) + "/" + (d/common);
+function makeCell(r,c,isAug){
+  let inp=document.createElement('input');
+  inp.type='text';
+  inp.className='matrix-cell'+(isAug?' aug-col':'');
+  inp.dataset.r=r; inp.dataset.c=c;
+  inp.value='0';
+  inp.setAttribute('aria-label',isAug?`b${r+1}`:`a${r+1}${c+1}`);
+
+  inp.addEventListener('keydown',function(e){
+    const rows=M, cols=N+1;
+    const cr=parseInt(this.dataset.r), cc=parseInt(this.dataset.c);
+    let nr=cr, nc=cc;
+    if(e.key==='ArrowRight'||e.key==='Tab'){nc++;if(nc>=cols){nc=0;nr++;}}
+    else if(e.key==='ArrowLeft'){nc--;if(nc<0){nc=cols-1;nr--;}}
+    else if(e.key==='ArrowDown'){nr++;}
+    else if(e.key==='ArrowUp'){nr--;}
+    else return;
+    if(nr<0||nr>=rows||nc<0||nc>=cols) return;
+    e.preventDefault();
+    let target=document.querySelector(`.matrix-cell[data-r="${nr}"][data-c="${nc}"]`);
+    if(target) target.focus();
+  });
+
+  inp.addEventListener('focus',function(){this.select();});
+  return inp;
 }
 
-function solve() {
-    const R = +document.getElementById('rows').value, C = +document.getElementById('cols').value;
-    const out = document.getElementById('steps-output'); out.innerHTML = '';
-    let M = [];
-    for(let i=0; i<R; i++) {
-        let row = [];
-        for(let j=0; j<C; j++) row.push(+document.getElementById(`v${i}_${j}`).value || 0);
-        row.push(+document.getElementById(`b${i}`).value || 0);
-        M.push(row);
-    }
-
-    addStep("Initial Augmented Matrix [A|B]", M);
-
-    let pR = 0;
-    for(let j=0; j<C && pR<R; j++) {
-        // 1. SMART SWAP: Find row starting with 1
-        let best = pR;
-        for(let i=pR; i<R; i++) {
-            if(Math.abs(M[i][j] - 1) < 1e-9) { best = i; break; }
-            if(Math.abs(M[i][j]) > Math.abs(M[best][j])) best = i;
-        }
-
-        if(Math.abs(M[best][j]) < 1e-9) continue;
-
-        if(best !== pR) {
-            [M[pR], M[best]] = [M[best], M[pR]];
-            addStep(`Swap R${pR+1} ↔ R${best+1} (Prioritizing '1' as pivot)`, M);
-        }
-
-        // 2. ELIMINATION: Detailed Step-by-Step like paper
-        for(let i=pR+1; i<R; i++) {
-            if(Math.abs(M[i][j]) > 1e-9) {
-                let factor = M[i][j] / M[pR][pR];
-                // Using the specific formula R_i -> R_i - (factor)R_pR
-                let opLabel = `R${i+1} → R${i+1} - (${toF(factor)})R${pR+1}`;
-                
-                for(let k=j; k<=C; k++) {
-                    M[i][k] = M[i][k] - (factor * M[pR][k]);
-                    if(Math.abs(M[i][k]) < 1e-9) M[i][k] = 0;
-                }
-                addStep(opLabel, M);
-            }
-        }
-        pR++;
-    }
-
-    finalize(M, R, C);
+function subscript(n){
+  const map={'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉'};
+  return String(n).split('').map(c=>map[c]||c).join('');
 }
 
-function addStep(msg, mat) {
-    let s = `<div class="step"><span class="op-tag">${msg}</span><table>`;
-    mat.forEach(r => { 
-        s += `<tr>` + r.map(c => `<td>${toF(c)}</td>`).join('') + `</tr>`; 
+function getMatrix(){
+  // returns M×(N+1) matrix of fractions
+  let mat=[];
+  for(let r=0;r<M;r++){
+    let row=[];
+    for(let c=0;c<=N;c++){
+      let el=document.querySelector(`.matrix-cell[data-r="${r}"][data-c="${c}"]`);
+      let val=el?el.value.trim():'0';
+      // support fractions like 1/2
+      if(val.includes('/')){
+        let parts=val.split('/');
+        row.push(frac(parseInt(parts[0])||0,parseInt(parts[1])||1));
+      } else {
+        let num=parseFloat(val)||0;
+        row.push(fnum(num));
+      }
+    }
+    mat.push(row);
+  }
+  return mat;
+}
+
+function clearMatrix(){
+  document.querySelectorAll('.matrix-cell').forEach(el=>el.value='0');
+}
+
+function loadExample(){
+  // Pre-fill a 3x3 example with infinite solutions: x+y+z=3, 2x+2y+2z=6, x-y+z=1
+  // Or unique: 2x+y-z=8, -3x-y+2z=-11, -2x+y+2z=-3
+  const examples={
+    '3-3':[
+      [2,1,-1,8],
+      [-3,-1,2,-11],
+      [-2,1,2,-3]
+    ],
+    '2-3':[
+      [1,2,1,4],
+      [2,4,3,9]
+    ],
+    '3-2':[
+      [1,2,5],
+      [2,3,8],
+      [1,1,3]
+    ],
+    '2-2':[
+      [1,2,5],
+      [3,4,11]
+    ]
+  };
+  let key=`${M}-${N}`;
+  let ex=examples[key]||examples['3-3'];
+  let useM=Math.min(M,ex.length);
+  let useN=Math.min(N,ex[0].length-1);
+  for(let r=0;r<useM;r++){
+    for(let c=0;c<=useN&&c<ex[r].length;c++){
+      let el=document.querySelector(`.matrix-cell[data-r="${r}"][data-c="${c}"]`);
+      if(el) el.value=ex[r][c];
+    }
+  }
+}
+
+// ==================== SOLVE ====================
+function solve(){
+  const steps=[];
+  let mat=getMatrix(); // M rows, N+1 cols (fractions)
+
+  function matCopy(m){return m.map(r=>r.map(f=>({...f})));}
+  function addStep(op,desc,m,changedRows,pivotCell){
+    steps.push({op,desc,mat:matCopy(m),changedRows:changedRows||[],pivotCell});
+  }
+
+  // Initial
+  addStep('المصفوفة الأصلية [A|b]','',mat,[],null);
+
+  let pivot_row=0;
+  let pivot_col=0;
+  let pivotCols=[]; // which column is pivot for each step
+
+  // Forward elimination
+  while(pivot_row<M && pivot_col<N){
+    // Find pivot in current column
+    let pRow=-1;
+    for(let r=pivot_row;r<M;r++){
+      if(!fisZero(mat[r][pivot_col])){ pRow=r; break; }
+    }
+
+    if(pRow===-1){
+      // No pivot in this column, move to next column
+      pivot_col++;
+      continue;
+    }
+
+    // Swap if needed (only if pivot isn't already in pivot_row)
+    if(pRow!==pivot_row){
+      let tmp=mat[pRow]; mat[pRow]=mat[pivot_row]; mat[pivot_row]=tmp;
+      addStep(`R${pivot_row+1} ↔ R${pRow+1}`,`تبديل الصفوف لرفع الأساسي`,mat,[pivot_row,pRow],{r:pivot_row,c:pivot_col});
+    }
+
+    // Make pivot = 1 (only if it's not already 1)
+    let pv=mat[pivot_row][pivot_col];
+    if(!fisOne(pv)){
+      let inv=frac(pv.d,pv.n); // 1/pv
+      let oldRow=matCopy(mat)[pivot_row];
+      for(let c=0;c<=N;c++){
+        mat[pivot_row][c]=fmul(mat[pivot_row][c],inv);
+      }
+      let opStr=`R${pivot_row+1} = (${fstr(inv)}) × R${pivot_row+1}`;
+      addStep(opStr,`توحيد العنصر القطري [${pivot_row+1},${pivot_col+1}]`,mat,[pivot_row],{r:pivot_row,c:pivot_col});
+    }
+
+    // Eliminate below
+    for(let r=pivot_row+1;r<M;r++){
+      if(fisZero(mat[r][pivot_col])) continue;
+      let factor=mat[r][pivot_col]; // mat[r][pc] / mat[pivot_row][pc] but pivot=1
+      // R_r = R_r - factor * R_pivot
+      let opStr=`R${r+1} = R${r+1} - (${fstr(factor)}) × R${pivot_row+1}`;
+      for(let c=0;c<=N;c++){
+        mat[r][c]=fsub(mat[r][c],fmul(factor,mat[pivot_row][c]));
+      }
+      addStep(opStr,`تصفير العنصر [${r+1},${pivot_col+1}]`,mat,[r],{r:pivot_row,c:pivot_col});
+    }
+
+    pivotCols.push(pivot_col);
+    pivot_row++;
+    pivot_col++;
+  }
+
+  // Row echelon done. Now compute ranks.
+  // rank A: number of non-zero rows in A part
+  function rowIsZeroA(r){
+    for(let c=0;c<N;c++) if(!fisZero(mat[r][c])) return false;
+    return true;
+  }
+  function rowIsZeroAug(r){
+    if(!rowIsZeroA(r)) return false;
+    return fisZero(mat[r][N]);
+  }
+
+  let rankA=0;
+  for(let r=0;r<M;r++) if(!rowIsZeroA(r)) rankA++;
+
+  let rankAug=0;
+  for(let r=0;r<M;r++) if(!rowIsZeroAug(r)) rankAug++;
+  // Actually rankAug = count of non-zero rows in augmented matrix
+  // But standard: rank[A|b] = rank if b doesn't add new pivot
+  // Simple: count rows that are not all-zero in [A|b]
+  // If a row has A=zero but b≠zero → rankAug > rankA
+  rankAug=rankA;
+  for(let r=0;r<M;r++){
+    if(rowIsZeroA(r)&&!fisZero(mat[r][N])) {rankAug=rankA+1; break;}
+  }
+
+  // Determine solution type
+  let solutionType; // 'unique','infinite','none'
+  if(rankA!==rankAug){
+    solutionType='none';
+  } else if(rankA===N){
+    solutionType='unique';
+  } else {
+    solutionType='infinite';
+  }
+
+  // Back-substitution (if unique) or parameterized (if infinite)
+  let solution={};
+  let params=[];
+  let numParams=N-rankA;
+
+  if(solutionType!=='none'){
+    // Back elimination to RREF
+    // Find pivot positions
+    let pivotPositions=[]; // {row, col}
+    let usedCols=new Set();
+    for(let r=0;r<M;r++){
+      for(let c=0;c<N;c++){
+        if(!fisZero(mat[r][c])&&!usedCols.has(c)){
+          pivotPositions.push({row:r,col:c});
+          usedCols.add(c);
+          break;
+        }
+      }
+    }
+
+    // Eliminate upward
+    for(let pi=pivotPositions.length-1;pi>=0;pi--){
+      let {row:pr,col:pc}=pivotPositions[pi];
+      for(let r=0;r<pr;r++){
+        if(fisZero(mat[r][pc])) continue;
+        let factor=mat[r][pc];
+        let opStr=`R${r+1} = R${r+1} - (${fstr(factor)}) × R${pr+1}`;
+        for(let c=0;c<=N;c++){
+          mat[r][c]=fsub(mat[r][c],fmul(factor,mat[pr][c]));
+        }
+        addStep(opStr,`تصفير العنصر فوق القطري [${r+1},${pc+1}]`,mat,[r],{r:pr,c:pc});
+      }
+    }
+
+    // Free variables
+    let freeVars=[];
+    for(let c=0;c<N;c++){
+      if(!usedCols.has(c)) freeVars.push(c);
+    }
+
+    // Assign parameters
+    let paramNames=['a','b','c','d','e','f','g','h'];
+    let paramMap={};
+    for(let i=0;i<freeVars.length;i++){
+      let pname=paramNames[i]||`t${i+1}`;
+      paramMap[freeVars[i]]=pname;
+      params.push({varIdx:freeVars[i],name:pname});
+    }
+
+    // Express pivot variables
+    for(let {row:pr,col:pc} of pivotPositions){
+      // x[pc] = mat[pr][N] - sum(mat[pr][c]*x[c] for free c)
+      let terms=[];
+      let constant=mat[pr][N];
+      for(let c=0;c<N;c++){
+        if(c===pc) continue;
+        if(!fisZero(mat[pr][c])){
+          if(freeVars.includes(c)){
+            // coefficient
+            let coeff=fmul(frac(-1,1),mat[pr][c]);
+            terms.push({coeff,param:paramMap[c]});
+          }
+        }
+      }
+      solution[pc]={constant,terms};
+    }
+  }
+
+  // ==================== RENDER ====================
+  renderSteps(steps,pivotPositions_final(mat,N));
+  renderResult(mat,rankA,rankAug,N,M,solutionType,solution,params,numParams);
+  drawChart(getMatrix_original(),N,M,solutionType,solution,params);
+
+  function pivotPositions_final(m,n){
+    let pos=[];
+    let usedCols=new Set();
+    for(let r=0;r<m.length;r++){
+      for(let c=0;c<n;c++){
+        if(!fisZero(m[r][c])&&!usedCols.has(c)){
+          pos.push({row:r,col:c});
+          usedCols.add(c);
+          break;
+        }
+      }
+    }
+    return pos;
+  }
+}
+
+// Save original matrix for chart
+let origMatrix=null;
+function getMatrix_original(){return origMatrix;}
+
+// Override solve to save original
+const _origSolve=solve;
+// Actually we need to capture matrix before solving
+function solveMain(){
+  origMatrix=getMatrix();
+  solve();
+}
+
+// ==================== RENDER STEPS ====================
+function renderSteps(steps){
+  const container=document.getElementById('steps-container');
+  container.innerHTML='';
+
+  steps.forEach((step,idx)=>{
+    let block=document.createElement('div');
+    block.className='step-block';
+    block.style.animationDelay=`${idx*0.04}s`;
+
+    let header=document.createElement('div');
+    header.className='step-header';
+
+    let num=document.createElement('span');
+    num.className='step-num';
+    num.textContent=`خطوة ${idx+1}`;
+
+    let op=document.createElement('span');
+    op.className='step-op';
+    op.textContent=step.op;
+
+    let desc=document.createElement('span');
+    desc.className='step-desc';
+    desc.textContent=step.desc;
+
+    header.appendChild(num);
+    header.appendChild(op);
+    if(step.desc) header.appendChild(desc);
+
+    let matWrap=document.createElement('div');
+    matWrap.className='step-matrix-wrap';
+
+    let tbl=document.createElement('table');
+    tbl.className='step-matrix';
+
+    step.mat.forEach((row,r)=>{
+      let tr=document.createElement('tr');
+
+      // Row label
+      let lbl=document.createElement('td');
+      lbl.className='row-lbl';
+      lbl.textContent=`R${r+1}`;
+      tr.appendChild(lbl);
+
+      row.forEach((cell,c)=>{
+        let td=document.createElement('td');
+        let isChanged=step.changedRows.includes(r);
+        let isZero=fisZero(cell);
+        let isPivot=step.pivotCell&&step.pivotCell.r===r&&step.pivotCell.c===c;
+        let isAugCol=c===N;
+
+        if(c===N) td.classList.add('aug-line');
+        if(isPivot) td.classList.add('pivot');
+        else if(isChanged&&!isZero) td.classList.add('changed');
+        else if(isZero) td.classList.add('zero');
+        if(c===N) td.classList.add('aug-val');
+
+        td.textContent=fstr(cell);
+        tr.appendChild(td);
+      });
+      tbl.appendChild(tr);
     });
-    document.getElementById('steps-output').innerHTML += s + `</table></div>`;
+
+    matWrap.appendChild(tbl);
+    block.appendChild(header);
+    block.appendChild(matWrap);
+    container.appendChild(block);
+  });
+
+  document.getElementById('card-steps').classList.remove('hidden');
 }
 
-function finalize(M, R, C) {
-    let rankA = 0;
-    let pivotCols = [];
-    for(let i=0; i<R; i++) {
-        let hasValue = false;
-        for(let j=0; j<C; j++) {
-            if(Math.abs(M[i][j]) > 1e-9) {
-                if(!hasValue) pivotCols.push(j);
-                hasValue = true;
-            }
-        }
-        if(hasValue) rankA++;
-    }
+// ==================== RENDER RESULT ====================
+function renderResult(mat,rankA,rankAug,n,m,type,solution,params,numParams){
+  const banner=document.getElementById('result-banner');
+  const dot=document.getElementById('result-dot');
+  const typeText=document.getElementById('result-type-text');
+  const rankRow=document.getElementById('rank-row');
+  const solArea=document.getElementById('solution-area');
+  const concl=document.getElementById('conclusion-text');
 
-    let h = `<div class="analysis"><h3>Final Analysis</h3><p>Rank (r) = ${rankA} | Unknowns (n) = ${C}</p>`;
-    
-    if(rankA < C) {
-        h += `<p style="color:var(--pivot)">Infinite Solutions (System has ${C - rankA} free parameter(s))</p>`;
-        h += `<p>Let x3 = a (arbitrary constant)</p>`;
-        // In the specific case of the image:
-        if(rankA === 2 && C === 3) {
-            h += `<div class="sol-line">x3 = a</div>`;
-            h += `<div class="sol-line">x2 = a</div>`;
-            h += `<div class="sol-line">x1 = -a</div>`;
-        }
-    } else {
-        h += `<p style="color:#22c55e">Unique Solution Found.</p>`;
+  banner.className='result-type-banner '+type;
+  dot.className='dot '+(type==='unique'?'green':type==='infinite'?'blue':'red');
+
+  let typeLabel={
+    unique:'حل وحيد — Unique Solution',
+    infinite:'حلول لا نهائية — Infinite Solutions',
+    none:'لا يوجد حل — No Solution'
+  }[type];
+  typeText.textContent=typeLabel;
+
+  // Ranks
+  rankRow.innerHTML=`
+    <div class="rank-badge"><span class="label">rank(A)</span><span class="val">${rankA}</span></div>
+    <div class="rank-badge"><span class="label">rank(A|b)</span><span class="val">${rankAug}</span></div>
+    <div class="rank-badge"><span class="label">n (مجاهيل)</span><span class="val">${n}</span></div>
+    <div class="rank-badge"><span class="label">عدد الثوابت</span><span class="val">${type==='infinite'?numParams:'—'}</span></div>
+  `;
+
+  // Solution
+  solArea.innerHTML='';
+  if(type==='none'){
+    solArea.innerHTML='<div class="conclusion" style="border-right-color:var(--red);color:var(--red);">المصفوفة متناقضة — لا يوجد حل</div>';
+  } else {
+    let varNames=['x','y','z','w','v','u','s','t'];
+    let varsDiv=document.createElement('div');
+    varsDiv.className='solution-vars';
+
+    for(let i=0;i<n;i++){
+      let line=document.createElement('div');
+      line.className='var-line';
+
+      let vname=varNames[i]||`x${i+1}`;
+
+      let nm=document.createElement('span');
+      nm.className='var-name';
+      nm.textContent=vname;
+
+      let eq=document.createElement('span');
+      eq.className='var-eq';
+      eq.textContent='=';
+
+      let vval=document.createElement('span');
+      vval.className='var-val';
+
+      if(solution[i]!==undefined){
+        let parts=[];
+        let c=solution[i].constant;
+        if(!fisZero(c)||solution[i].terms.length===0) parts.push(fstr(c));
+        solution[i].terms.forEach(t=>{
+          let cs=fstr(t.coeff);
+          if(cs==='1') parts.push(t.param);
+          else if(cs==='-1') parts.push(`-${t.param}`);
+          else parts.push(`${cs}${t.param}`);
+        });
+        vval.textContent=parts.join(' + ').replace(/\+ -/g,'- ');
+      } else if(params.find(p=>p.varIdx===i)){
+        vval.textContent=params.find(p=>p.varIdx===i).name;
+        vval.style.color='var(--orange)';
+      } else {
+        vval.textContent='—';
+      }
+
+      line.appendChild(nm);
+      line.appendChild(eq);
+      line.appendChild(vval);
+      varsDiv.appendChild(line);
     }
-    
-    document.getElementById('steps-output').innerHTML += h + `</div>`;
+    solArea.appendChild(varsDiv);
+  }
+
+  // Conclusion
+  let conclusions={
+    unique:`rank(A) = rank(A|b) = n = ${n} → حل وحيد. تم إيجاد قيمة كل مجهول بالتعويض العكسي.`,
+    infinite:`rank(A) = rank(A|b) = ${rankA} < n = ${n} → حلول لا نهائية.\nعدد الثوابت الحرة = n - r = ${n} - ${rankA} = ${numParams}`,
+    none:`rank(A) = ${rankA} ≠ rank(A|b) = ${rankAug} → لا يوجد حل (المعادلات متناقضة).`
+  };
+  concl.textContent=conclusions[type];
+
+  document.getElementById('card-result').classList.remove('hidden');
 }
 
-window.onload = initGrid;
+// ==================== CHART ====================
+function drawChart(origMat,n,m,type,solution,params){
+  if(!origMat||n>3) {
+    document.getElementById('card-chart').classList.add('hidden');
+    return;
+  }
+  document.getElementById('card-chart').classList.remove('hidden');
+  const canvas=document.getElementById('chart');
+  const ctx=canvas.getContext('2d');
+  const W=canvas.offsetWidth||700;
+  const H=320;
+  canvas.width=W; canvas.height=H;
+
+  // Draw coordinate system
+  ctx.fillStyle='#161b2e';
+  ctx.fillRect(0,0,W,H);
+
+  const cx=W/2, cy=H/2;
+  const scale=30;
+
+  // Grid
+  ctx.strokeStyle='rgba(30,38,64,0.8)';
+  ctx.lineWidth=1;
+  for(let x=-Math.ceil(W/scale/2);x<=Math.ceil(W/scale/2);x++){
+    ctx.beginPath();
+    ctx.moveTo(cx+x*scale,0);
+    ctx.lineTo(cx+x*scale,H);
+    ctx.stroke();
+  }
+  for(let y=-Math.ceil(H/scale/2);y<=Math.ceil(H/scale/2);y++){
+    ctx.beginPath();
+    ctx.moveTo(0,cy+y*scale);
+    ctx.lineTo(W,cy+y*scale);
+    ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle='rgba(79,142,247,0.4)';
+  ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle='rgba(100,116,139,0.8)';
+  ctx.font='11px IBM Plex Mono, monospace';
+  ctx.textAlign='center';
+  for(let x=-10;x<=10;x+=2){
+    if(x===0) continue;
+    ctx.fillText(x, cx+x*scale, cy+14);
+  }
+  ctx.textAlign='right';
+  for(let y=-5;y<=5;y+=2){
+    if(y===0) continue;
+    ctx.fillText(-y, cx-6, cy+y*scale+4);
+  }
+
+  const colors=['#4f8ef7','#22d3a0','#f59e0b','#ef4444','#7c3aed','#ec4899'];
+
+  if(n>=2){
+    // Plot each equation as a line (2D: a*x + b*y = c)
+    origMat.forEach((row,idx)=>{
+      let a=fval(row[0]), b=fval(row[1]), c=fval(row[n]);
+      ctx.strokeStyle=colors[idx%colors.length];
+      ctx.lineWidth=2.5;
+      ctx.beginPath();
+      let started=false;
+      for(let px=0;px<W;px++){
+        let xv=(px-cx)/scale;
+        let yv;
+        if(Math.abs(b)>1e-10){
+          yv=(c-a*xv)/b;
+        } else if(Math.abs(a)>1e-10){
+          // vertical line
+          if(Math.abs(xv - c/a)<0.5/scale){
+            if(!started){ctx.moveTo(px,0);started=true;}
+            ctx.lineTo(px,H);
+          }
+          continue;
+        } else continue;
+        let py=cy-yv*scale;
+        if(!started){ctx.moveTo(px,py);started=true;}
+        else ctx.lineTo(px,py);
+      }
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle=colors[idx%colors.length];
+      ctx.font='bold 11px IBM Plex Mono, monospace';
+      ctx.textAlign='left';
+      let lx=W-60, ly=25+(idx*18);
+      ctx.fillText(`Eq${idx+1}`,lx,ly);
+    });
+
+    // Mark solution point if unique
+    if(type==='unique'&&solution[0]&&solution[1]){
+      let sx=fval(solution[0].constant), sy=fval(solution[1].constant);
+      let px=cx+sx*scale, py=cy-sy*scale;
+      if(px>=0&&px<=W&&py>=0&&py<=H){
+        ctx.fillStyle='#fff';
+        ctx.beginPath();
+        ctx.arc(px,py,6,0,Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle='#22d3a0';
+        ctx.lineWidth=2;
+        ctx.stroke();
+        ctx.fillStyle='#22d3a0';
+        ctx.font='bold 11px Cairo, sans-serif';
+        ctx.textAlign='left';
+        ctx.fillText(`(${fstr(solution[0].constant)}, ${fstr(solution[1].constant)})`,px+10,py-6);
+      }
+    }
+  }
+
+  // Title
+  ctx.fillStyle='rgba(100,116,139,0.6)';
+  ctx.font='11px IBM Plex Mono, monospace';
+  ctx.textAlign='left';
+  ctx.fillText(n===2?'رسم في المستوى x-y (أول معادلتين)':'رسم المعادلات (أول بُعدين)',10,14);
+}
+
+// ==================== OVERRIDE SOLVE BUTTON ====================
+document.addEventListener('DOMContentLoaded',()=>{
+  // Nothing on load; build matrix is triggered by button
+});
+
+// patch solve button
+function solve(){
+  origMatrix=getMatrix();
+  _solve();
+}
+
+function _solve(){
+  const steps=[];
+  let mat=getMatrix();
+
+  function matCopy(m){return m.map(r=>r.map(f=>({...f})));}
+  function addStep(op,desc,m,changedRows,pivotCell){
+    steps.push({op,desc,mat:matCopy(m),changedRows:changedRows||[],pivotCell});
+  }
+
+  addStep('المصفوفة الأصلية [A|b]','',mat,[],null);
+
+  let pivot_row=0;
+  let pivot_col=0;
+
+  while(pivot_row<M && pivot_col<N){
+    let pRow=-1;
+    for(let r=pivot_row;r<M;r++){
+      if(!fisZero(mat[r][pivot_col])){ pRow=r; break; }
+    }
+    if(pRow===-1){ pivot_col++; continue; }
+
+    // Smart pivot: prefer a row that already has 1 in pivot_col (avoids fractions)
+    // If none has 1, prefer a row whose pivot_col value divides all elements in that row evenly
+    // Only fall back to 1/pv multiplication if no better option exists
+    {
+      // Among rows pivot_row..M-1 that have non-zero in pivot_col, find best
+      let bestRow=pRow;
+
+      // Priority 1: row with pivot = 1
+      for(let r=pivot_row;r<M;r++){
+        if(fisOne(mat[r][pivot_col])){ bestRow=r; break; }
+      }
+
+      // Priority 2 (if no row has 1): row where pivot divides all elements cleanly (all n/pivot are integers)
+      if(!fisOne(mat[bestRow][pivot_col])){
+        for(let r=pivot_row;r<M;r++){
+          if(fisZero(mat[r][pivot_col])) continue;
+          let pv=mat[r][pivot_col];
+          let allClean=true;
+          for(let c=0;c<=N;c++){
+            let divided=fdiv(mat[r][c],pv);
+            if(divided.d!==1){ allClean=false; break; }
+          }
+          if(allClean){ bestRow=r; break; }
+        }
+      }
+
+      pRow=bestRow;
+    }
+
+    if(pRow!==pivot_row){
+      let tmp=mat[pRow]; mat[pRow]=mat[pivot_row]; mat[pivot_row]=tmp;
+      addStep(`R${pivot_row+1} ↔ R${pRow+1}`,`تبديل الصفوف`,mat,[pivot_row,pRow],{r:pivot_row,c:pivot_col});
+    }
+
+    let pv=mat[pivot_row][pivot_col];
+    if(!fisOne(pv)){
+      let inv=frac(pv.d,pv.n);
+      for(let c=0;c<=N;c++) mat[pivot_row][c]=fmul(mat[pivot_row][c],inv);
+      addStep(`R${pivot_row+1} = (${fstr(inv)}) × R${pivot_row+1}`,`توحيد العنصر القطري`,mat,[pivot_row],{r:pivot_row,c:pivot_col});
+    }
+
+    for(let r=pivot_row+1;r<M;r++){
+      if(fisZero(mat[r][pivot_col])) continue;
+      let factor=mat[r][pivot_col];
+      let opStr=`R${r+1} = R${r+1} - (${fstr(factor)}) × R${pivot_row+1}`;
+      for(let c=0;c<=N;c++) mat[r][c]=fsub(mat[r][c],fmul(factor,mat[pivot_row][c]));
+      addStep(opStr,`تصفير العنصر [${r+1},${pivot_col+1}]`,mat,[r],{r:pivot_row,c:pivot_col});
+    }
+
+    pivot_row++;
+    pivot_col++;
+  }
+
+  // Ranks
+  function rowIsZeroA(r){ for(let c=0;c<N;c++) if(!fisZero(mat[r][c])) return false; return true; }
+  let rankA=0;
+  for(let r=0;r<M;r++) if(!rowIsZeroA(r)) rankA++;
+  let rankAug=rankA;
+  for(let r=0;r<M;r++) if(rowIsZeroA(r)&&!fisZero(mat[r][N])){ rankAug=rankA+1; break; }
+
+  let type;
+  if(rankA!==rankAug) type='none';
+  else if(rankA===N) type='unique';
+  else type='infinite';
+
+  let solution={}, params=[], numParams=N-rankA;
+
+  if(type!=='none'){
+    // Find pivot cols
+    let usedCols=new Set();
+    let pivotPositions=[];
+    for(let r=0;r<M;r++){
+      for(let c=0;c<N;c++){
+        if(!fisZero(mat[r][c])&&!usedCols.has(c)){
+          pivotPositions.push({row:r,col:c});
+          usedCols.add(c); break;
+        }
+      }
+    }
+
+    // Back elimination (upward)
+    for(let pi=pivotPositions.length-1;pi>=0;pi--){
+      let {row:pr,col:pc}=pivotPositions[pi];
+      for(let r=0;r<pr;r++){
+        if(fisZero(mat[r][pc])) continue;
+        let factor=mat[r][pc];
+        let opStr=`R${r+1} = R${r+1} - (${fstr(factor)}) × R${pr+1}`;
+        for(let c=0;c<=N;c++) mat[r][c]=fsub(mat[r][c],fmul(factor,mat[pr][c]));
+        addStep(opStr,`تصفير فوق القطر [${r+1},${pc+1}]`,mat,[r],{r:pr,c:pc});
+      }
+    }
+
+    let freeVars=[];
+    for(let c=0;c<N;c++) if(!usedCols.has(c)) freeVars.push(c);
+
+    let paramNames=['a','b','c','d','e','f'];
+    let paramMap={};
+    freeVars.forEach((fv,i)=>{
+      paramMap[fv]=paramNames[i]||`t${i+1}`;
+      params.push({varIdx:fv,name:paramNames[i]||`t${i+1}`});
+    });
+
+    for(let {row:pr,col:pc} of pivotPositions){
+      let constant=mat[pr][N];
+      let terms=[];
+      for(let c=0;c<N;c++){
+        if(c===pc) continue;
+        if(!fisZero(mat[pr][c])&&freeVars.includes(c)){
+          terms.push({coeff:fmul(frac(-1,1),mat[pr][c]),param:paramMap[c]});
+        }
+      }
+      solution[pc]={constant,terms};
+    }
+  }
+
+  renderSteps(steps);
+  renderResult(mat,rankA,rankAug,N,M,type,solution,params,numParams);
+
+  // Draw chart
+  const cmat=origMatrix||getMatrix();
+  drawChart(cmat,N,M,type,solution,params);
+}
 </script>
 </body>
 </html>
